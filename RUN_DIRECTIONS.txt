@@ -1,0 +1,91 @@
+CS485 People-Following Robot - Run Directions
+==============================================
+ROS 2 Jazzy + Gazebo Harmonic + RViz2, simulated TurtleBot 4.
+All commands are run from the CS485-Project folder.
+
+
+FIRST-TIME SETUP (once per machine)
+-----------------------------------
+1. Install the TurtleBot 4 simulator packages (run in a normal terminal so
+   sudo can ask for your password):
+
+     sudo apt update
+     sudo apt install -y ros-jazzy-turtlebot4-simulator ros-jazzy-turtlebot4-desktop ros-jazzy-teleop-twist-keyboard
+
+2. Build the workspace:
+
+     ./scripts/build.sh
+
+
+RUNNING THE SIMULATION
+----------------------
+Terminal 1 - Gazebo + TurtleBot 4 + RViz:
+
+     ./scripts/launch_sim.sh
+
+   Startup takes a while. Wait until the robot appears in Gazebo and RViz
+   opens before moving on.
+
+Terminal 2 - drive the robot with the keyboard:
+
+     ./scripts/launch_teleop.sh
+
+   Keep this terminal focused while pressing keys:
+     i = forward    , = backward    j / l = turn left / right
+     k = stop       q / z = faster / slower
+
+
+OPTIONS FOR launch_sim.sh
+-------------------------
+  world:=box_room      empty 10 m x 10 m room (default)
+  world:=warehouse     TurtleBot 4 stock worlds: warehouse, maze, depot
+  rviz:=false          skip RViz
+  x:=1.0 y:=-2.0 yaw:=1.57    starting pose of the robot
+  model:=lite          TurtleBot 4 Lite (no camera - not useful for following)
+
+  Example:  ./scripts/launch_sim.sh world:=maze rviz:=false
+
+
+STOPPING
+--------
+Press Ctrl+C in each terminal. If Gazebo hangs, close it and check that
+nothing is left running before relaunching:
+
+     pgrep -af "gz sim|parameter_bridge|rviz2"
+
+
+AFTER CHANGING CODE
+-------------------
+  - Edited an existing Python file: no rebuild needed (symlink install).
+  - Added a new file, world, launch file, or node entry in setup.py:
+
+     ./scripts/build.sh
+
+
+CHECKING SENSORS (in another terminal)
+--------------------------------------
+     source scripts/env.sh
+     ros2 topic list
+     ros2 topic echo --once /scan --field header
+     ros2 topic hz /oakd/rgb/preview/image_raw
+
+  Key topics:
+     /scan                         LiDAR (sensor_msgs/LaserScan)
+     /oakd/rgb/preview/image_raw   camera image (sensor_msgs/Image)
+     /oakd/rgb/preview/depth       depth image (sensor_msgs/Image)
+     /odom                         odometry (nav_msgs/Odometry)
+     /cmd_vel                      drive commands (geometry_msgs/TwistStamped)
+
+
+TROUBLESHOOTING
+---------------
+  - "Workspace not built yet": run ./scripts/build.sh.
+  - "Package 'people_follower' not found": run ./scripts/build.sh.
+  - No topics show up: make sure every terminal uses the scripts (or runs
+    "source scripts/env.sh") so they share ROS_DOMAIN_ID=30.
+  - Everything is slow / camera updates rarely: the simulation is limited
+    by the computer's graphics card. Close other programs, use rviz:=false,
+    or run on a faster machine.
+  - Warning "Desired controller update period ... faster than the gazebo
+    simulation period": appears with the stock TurtleBot 4 worlds too; it can
+    be ignored for now.
