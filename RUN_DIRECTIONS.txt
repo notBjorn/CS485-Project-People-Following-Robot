@@ -35,6 +35,33 @@ Terminal 2 - drive the robot with the keyboard:
      k = stop       q / z = faster / slower
 
 
+MAPPING AND NAVIGATION
+----------------------
+Navigation needs a saved map of the world. warehouse, maze and depot already
+have maps (installed with the TurtleBot 4 packages); box_room needs one made once.
+
+Making a map (SLAM):
+  Terminal 1:   ./scripts/launch_slam.sh                (add world:=... for other worlds)
+  Terminal 2:   ./scripts/launch_teleop.sh              drive around until the map in RViz is complete
+  Terminal 3:   ./scripts/save_map.sh box_room          name it after the world
+  Then stop everything (Ctrl+C) and run:  ./scripts/build.sh
+  The map is saved in src/people_follower/maps/ - commit it so the team has it.
+
+Navigating on the map:
+  Terminal 1:   ./scripts/launch_nav.sh                 (add world:=warehouse etc.)
+  In RViz:      "2D Pose Estimate" = tell the robot where it is
+                "Nav2 Goal"        = click a spot to send the robot there
+
+Automated navigation (no clicking):
+  Terminal 1:   ./scripts/launch_nav.sh
+  Terminal 2:   ./scripts/launch_nav_node.sh
+                The node docks, sets its starting pose, waits for Nav2, undocks
+                and drives to the goal. Choose the goal with:
+                ./scripts/launch_nav_node.sh -p goal_x:=3.0 -p goal_y:=-2.0
+                Node parameters: initial_x, initial_y, initial_direction (degrees),
+                goal_x, goal_y, update_period (s), resend_distance (m)
+
+
 OPTIONS FOR launch_sim.sh
 -------------------------
   world:=box_room      empty 10 m x 10 m room (default)
@@ -42,6 +69,10 @@ OPTIONS FOR launch_sim.sh
   rviz:=false          skip RViz
   x:=1.0 y:=-2.0 yaw:=1.57    starting pose of the robot
   model:=lite          TurtleBot 4 Lite (no camera - not useful for following)
+  slam:=true           build a map (same as launch_slam.sh)
+  localization:=true   AMCL on the saved map for the world
+  nav2:=true           Nav2 path planning (use with localization:=true)
+  map:=/path/to/map.yaml    use a specific map instead of <world>.yaml
 
   Example:  ./scripts/launch_sim.sh world:=maze rviz:=false
 
@@ -81,6 +112,10 @@ TROUBLESHOOTING
 ---------------
   - "Workspace not built yet": run ./scripts/build.sh.
   - "Package 'people_follower' not found": run ./scripts/build.sh.
+  - "No map found for this world": make one (see MAPPING AND NAVIGATION) or
+    pass map:=/path/to/map.yaml.
+  - The robot doesn't move in Nav2 / RViz shows no map: set "2D Pose Estimate"
+    in RViz, or check the node's initial_x / initial_y match where it spawned.
   - No topics show up: make sure every terminal uses the scripts (or runs
     "source scripts/env.sh") so they share ROS_DOMAIN_ID=30.
   - Everything is slow / camera updates rarely: the simulation is limited
