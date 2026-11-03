@@ -1,0 +1,1333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS485 Robot Guide</title>
+<meta name="description" content="How to set up, run, troubleshoot and understand the CS485 people-following TurtleBot 4 simulation.">
+<!--
+  HOW TO UPDATE THIS FILE
+  - It's one self-contained file: no build step, no internet needed. Open it in a browser.
+  - Add a section:   <section id="my-id"><h2>Title</h2> ... </section>  inside <main>.
+                     The sidebar and search pick it up automatically (h2 = entry, h3 = sub-entry).
+  - Add a command:   <pre><code>...</code></pre>  gets a copy button automatically.
+  - Add a problem:   copy a <details class="issue"> block in #troubleshooting.
+  - Add a script:    add a <tr> to the table in #scripts.
+  - Log changes in #changelog and bump "Last updated" in the header.
+  - Colors live in the :root tokens below; diagrams use the same tokens, so they follow the theme.
+-->
+<style>
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --text: #1b2330;
+  --muted: #5d6878;
+  --border: #dde2ea;
+  --accent: #1f6feb;
+  --accent-soft: #e3edfd;
+  --accent-2: #e8742c;
+  --accent-2-soft: #fdeee3;
+  --ok: #1a7f4b;
+  --ok-soft: #e1f4ea;
+  --warn: #9a6200;
+  --warn-soft: #fbf0d9;
+  --bad: #c0362c;
+  --bad-soft: #fbe5e3;
+  --code-bg: #0f1724;
+  --code-text: #dbe4f0;
+  --code-dim: #7d8ba1;
+  --shadow: 0 1px 2px rgba(20, 30, 50, .06), 0 4px 16px rgba(20, 30, 50, .06);
+  --radius: 12px;
+  --sidebar: 270px;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+  --mono: ui-monospace, "JetBrains Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1117; --surface: #151b24; --surface-2: #1c2430; --text: #e3e8ef; --muted: #98a3b3;
+    --border: #2a3441; --accent: #5b9dff; --accent-soft: #16243a; --accent-2: #f39a5e; --accent-2-soft: #33231a;
+    --ok: #4cc38a; --ok-soft: #13291e; --warn: #e3b341; --warn-soft: #2e2512; --bad: #ff7b72; --bad-soft: #341a19;
+    --code-bg: #0a0e14; --code-text: #d6deeb; --code-dim: #6b788c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1117; --surface: #151b24; --surface-2: #1c2430; --text: #e3e8ef; --muted: #98a3b3;
+  --border: #2a3441; --accent: #5b9dff; --accent-soft: #16243a; --accent-2: #f39a5e; --accent-2-soft: #33231a;
+  --ok: #4cc38a; --ok-soft: #13291e; --warn: #e3b341; --warn-soft: #2e2512; --bad: #ff7b72; --bad-soft: #341a19;
+  --code-bg: #0a0e14; --code-text: #d6deeb; --code-dim: #6b788c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+body {
+  margin: 0; background: var(--bg); color: var(--text); font: 15.5px/1.65 var(--font);
+  -webkit-font-smoothing: antialiased; overflow-x: hidden;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code { font-family: var(--mono); font-size: .88em; background: var(--surface-2); padding: .12em .38em; border-radius: 5px; }
+kbd {
+  font-family: var(--mono); font-size: .82em; padding: .1em .45em; border-radius: 5px;
+  border: 1px solid var(--border); border-bottom-width: 2px; background: var(--surface);
+}
+
+/* ---------- top bar ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 14px;
+  height: 60px; padding: 0 20px; background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(10px); border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; white-space: nowrap; }
+.brand svg { flex: none; }
+.brand small { font-weight: 500; color: var(--muted); }
+.search { position: relative; flex: 1; max-width: 420px; margin-left: auto; }
+.search input {
+  width: 100%; height: 38px; padding: 0 64px 0 36px; border-radius: 9px; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text); font: inherit; font-size: 14px; outline: none;
+}
+.search input:focus { border-color: var(--accent); background: var(--surface); }
+.search .icon { position: absolute; left: 11px; top: 10px; color: var(--muted); }
+.search kbd { position: absolute; right: 10px; top: 8px; }
+.search .count { position: absolute; right: 40px; top: 9px; font-size: 12px; color: var(--muted); }
+.iconbtn {
+  display: grid; place-items: center; width: 38px; height: 38px; flex: none; border-radius: 9px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer;
+}
+.iconbtn:hover { border-color: var(--accent); }
+#menuBtn { display: none; }
+
+/* ---------- layout ---------- */
+.layout { display: grid; grid-template-columns: var(--sidebar) minmax(0, 1fr); max-width: 1320px; margin: 0 auto; }
+nav.toc {
+  position: sticky; top: 60px; align-self: start; height: calc(100vh - 60px); overflow-y: auto;
+  padding: 22px 12px 40px 20px; border-right: 1px solid var(--border);
+}
+.toc .label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px 10px; }
+.toc a {
+  display: block; padding: 5px 10px; border-radius: 7px; color: var(--muted); font-size: 14px; line-height: 1.4;
+  border-left: 2px solid transparent;
+}
+.toc a.sub { padding-left: 24px; font-size: 13px; }
+.toc a:hover { color: var(--text); background: var(--surface-2); text-decoration: none; }
+.toc a.active { color: var(--accent); background: var(--accent-soft); border-left-color: var(--accent); font-weight: 600; }
+.toc a.hidden { display: none; }
+main { padding: 34px 44px 120px; min-width: 0; }
+section { margin-bottom: 64px; }
+section.hidden, .issue.hidden, tr.hidden, .card.hidden { display: none; }
+h1 { font-size: 2.1rem; line-height: 1.2; margin: 0 0 10px; letter-spacing: -.02em; }
+h2 { font-size: 1.55rem; margin: 0 0 14px; letter-spacing: -.01em; display: flex; align-items: center; gap: 10px; }
+h2 .num {
+  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; font-size: 14px;
+  background: var(--accent-soft); color: var(--accent); flex: none;
+}
+h3 { font-size: 1.12rem; margin: 30px 0 10px; }
+p { margin: 0 0 14px; }
+.lead { font-size: 1.08rem; color: var(--muted); max-width: 760px; }
+.muted { color: var(--muted); }
+
+/* ---------- hero ---------- */
+.hero {
+  position: relative; overflow: hidden; padding: 30px 32px; margin-bottom: 40px; border-radius: 18px;
+  background: linear-gradient(135deg, var(--accent-soft), var(--surface) 55%, var(--accent-2-soft));
+  border: 1px solid var(--border); box-shadow: var(--shadow);
+}
+.hero .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.hero svg.deco { position: absolute; right: -10px; bottom: -14px; opacity: .9; pointer-events: none; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12.5px;
+  background: var(--surface); border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
+}
+.pill b { color: var(--text); font-weight: 600; }
+
+/* ---------- cards / grids ---------- */
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+.card h4 { margin: 0 0 6px; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+.card p:last-child { margin-bottom: 0; }
+.card .tag { margin-left: auto; }
+.tag {
+  display: inline-block; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 6px; white-space: nowrap;
+}
+.tag.ok { background: var(--ok-soft); color: var(--ok); }
+.tag.warn { background: var(--warn-soft); color: var(--warn); }
+.tag.bad { background: var(--bad-soft); color: var(--bad); }
+.tag.info { background: var(--accent-soft); color: var(--accent); }
+
+.callout {
+  display: flex; gap: 12px; padding: 14px 16px; border-radius: 10px; margin: 16px 0; border: 1px solid;
+  font-size: 14.5px;
+}
+.callout .ic { flex: none; font-weight: 700; }
+.callout p:last-child { margin: 0; }
+.callout.info { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+.callout.warn { background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 35%, transparent); }
+.callout.bad { background: var(--bad-soft); border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
+.callout.ok { background: var(--ok-soft); border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
+
+/* ---------- code ---------- */
+.code { position: relative; margin: 12px 0 18px; }
+pre {
+  margin: 0; padding: 16px 18px; padding-right: 64px; overflow-x: auto; border-radius: 10px;
+  background: var(--code-bg); color: var(--code-text); font: 13.5px/1.6 var(--mono);
+}
+pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+pre .c { color: var(--code-dim); }
+pre .p { color: #7ee787; user-select: none; }
+.copy {
+  position: absolute; top: 8px; right: 8px; padding: 4px 9px; border-radius: 6px; font: 12px var(--font);
+  border: 1px solid #2c3a4f; background: #18222f; color: #b8c4d4; cursor: pointer; opacity: .85;
+}
+.copy:hover { opacity: 1; color: #fff; }
+.copy.done { color: #7ee787; border-color: #2f6b3d; }
+
+/* ---------- terminal recipe ---------- */
+.recipe { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin: 14px 0 6px; }
+.term { border-radius: 10px; overflow: hidden; background: var(--code-bg); box-shadow: var(--shadow); }
+.term .bar {
+  display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #1a2433; color: #9fb0c6;
+  font: 12px var(--font);
+}
+.term .bar i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.term .bar span { margin-left: 8px; }
+.term .code { margin: 0; }
+.term pre { border-radius: 0; }
+
+/* ---------- tables ---------- */
+.tablewrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); margin: 12px 0 18px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { background: var(--surface-2); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td code { white-space: nowrap; }
+td.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- tabs ---------- */
+.tabs { margin: 14px 0; }
+.tablist { display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: var(--surface-2); width: fit-content; max-width: 100%; overflow-x: auto; }
+.tablist button {
+  padding: 7px 14px; border: 0; border-radius: 7px; background: none; color: var(--muted); font: inherit;
+  font-size: 14px; cursor: pointer; white-space: nowrap;
+}
+.tablist button[aria-selected="true"] { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
+.tabpanel { display: none; padding-top: 10px; }
+.tabpanel.active { display: block; }
+
+/* ---------- steps ---------- */
+ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 14px 0; }
+ol.steps > li { position: relative; counter-increment: s; padding: 0 0 18px 44px; }
+ol.steps > li::before {
+  content: counter(s); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--accent); color: #fff;
+}
+ol.steps > li::after { content: ""; position: absolute; left: 13.5px; top: 32px; bottom: 4px; width: 1px; background: var(--border); }
+ol.steps > li:last-child::after { display: none; }
+ol.steps > li > b:first-child { display: block; margin-bottom: 2px; }
+
+/* ---------- troubleshooting ---------- */
+.issue {
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); margin: 10px 0;
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.issue summary {
+  display: flex; align-items: center; gap: 10px; padding: 13px 16px; cursor: pointer; list-style: none; font-weight: 600;
+}
+.issue summary::-webkit-details-marker { display: none; }
+.issue summary::after { content: "+"; margin-left: auto; font-size: 18px; color: var(--muted); transition: transform .15s; }
+.issue[open] summary::after { transform: rotate(45deg); }
+.issue summary .sym { font-family: var(--mono); font-weight: 500; font-size: 13px; color: var(--muted); }
+.issue .body { padding: 0 18px 14px; border-top: 1px dashed var(--border); padding-top: 12px; }
+.issue .body h5 { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+.filters button {
+  padding: 4px 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  font: inherit; font-size: 13px; cursor: pointer;
+}
+.filters button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ---------- diagrams ---------- */
+figure.diagram { margin: 16px 0 22px; padding: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+figure.diagram svg { display: block; width: 100%; height: auto; }
+figure.diagram figcaption { margin-top: 10px; font-size: 13px; color: var(--muted); }
+svg text { font-family: var(--font); }
+.d-box { fill: var(--surface-2); stroke: var(--border); stroke-width: 1.5; }
+.d-gz { fill: var(--accent-2-soft); stroke: var(--accent-2); stroke-width: 1.5; }
+.d-ros { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+.d-ours { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.d-group { fill: none; stroke: var(--border); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.d-t { fill: var(--text); font-size: 13px; font-weight: 600; }
+.d-s { fill: var(--muted); font-size: 11.5px; }
+.d-m { fill: var(--muted); font-size: 11px; font-family: var(--mono); }
+.d-line { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.d-flow { stroke: var(--accent); stroke-width: 2; fill: none; stroke-dasharray: 6 5; animation: flow 1.2s linear infinite; }
+.d-flow2 { stroke: var(--accent-2); stroke-width: 2; fill: none; stroke-dasharray: 6 5; animation: flow 1.2s linear infinite; }
+.d-flow3 { stroke: var(--ok); stroke-width: 2; fill: none; stroke-dasharray: 6 5; animation: flow 1.2s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -22; } }
+@media (prefers-reduced-motion: reduce) { .d-flow, .d-flow2, .d-flow3 { animation: none; } html { scroll-behavior: auto; } }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+.legend span::before { content: ""; display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; border: 1.5px solid; }
+.legend .lg-gz::before { background: var(--accent-2-soft); border-color: var(--accent-2); }
+.legend .lg-ros::before { background: var(--accent-soft); border-color: var(--accent); }
+.legend .lg-ours::before { background: var(--ok-soft); border-color: var(--ok); }
+
+/* ---------- path playground ---------- */
+.playground { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.playground canvas { width: 100%; aspect-ratio: 1; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); cursor: crosshair; touch-action: none; }
+.playground .side .code { margin-top: 6px; }
+.btnrow { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.btn {
+  padding: 7px 13px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  font: inherit; font-size: 13.5px; cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ---------- file tree ---------- */
+.tree { font: 13.5px/1.75 var(--mono); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; overflow-x: auto; white-space: pre; }
+.tree .d { color: var(--accent); font-weight: 600; }
+.tree .n { color: var(--muted); font-family: var(--font); font-size: 12.5px; }
+.tree .new { color: var(--ok); }
+
+/* ---------- changelog ---------- */
+.timeline { position: relative; margin: 10px 0 0 6px; padding-left: 26px; border-left: 2px solid var(--border); }
+.timeline .ev { position: relative; margin-bottom: 22px; }
+.timeline .ev::before {
+  content: ""; position: absolute; left: -33px; top: 6px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--surface); border: 3px solid var(--accent);
+}
+.timeline .ev.major::before { border-color: var(--accent-2); }
+.timeline time { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.timeline h4 { margin: 2px 0 4px; font-size: 1rem; }
+.timeline p, .timeline ul { margin: 0; font-size: 14.5px; }
+.timeline ul { padding-left: 18px; }
+
+mark { background: color-mix(in srgb, var(--accent-2) 35%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+.totop {
+  position: fixed; right: 22px; bottom: 22px; z-index: 20; opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.totop.show { opacity: 1; pointer-events: auto; }
+.empty { display: none; padding: 40px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: var(--radius); }
+.empty.show { display: block; }
+footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 980px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  nav.toc {
+    position: fixed; top: 60px; left: 0; z-index: 25; width: min(300px, 86vw); background: var(--surface);
+    transform: translateX(-105%); transition: transform .2s; box-shadow: var(--shadow);
+  }
+  body.menu-open nav.toc { transform: none; }
+  #menuBtn { display: grid; }
+  main { padding: 24px 16px 100px; }
+  .playground { grid-template-columns: 1fr; }
+  .brand small { display: none; }
+  .search kbd { display: none; }
+  .search .count { right: 10px; }
+}
+@media (max-width: 560px) {
+  .topbar { gap: 8px; padding: 0 12px; }
+  .brand span.name { display: none; }
+  h1 { font-size: 1.65rem; }
+  .hero { padding: 22px 18px; }
+  .hero svg.deco { display: none; }
+  th, td { padding: 8px 10px; }
+}
+@media print {
+  .topbar, nav.toc, .copy, .totop, .filters, .search { display: none !important; }
+  .layout { display: block; }
+  main { padding: 0; }
+  details.issue { break-inside: avoid; }
+  details.issue:not([open]) > .body { display: block; }
+  section.hidden, .issue.hidden, tr.hidden { display: block; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="iconbtn" id="menuBtn" aria-label="Open contents">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
+  <div class="brand">
+    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+      <circle cx="16" cy="16" r="14" fill="var(--accent)"/>
+      <circle cx="16" cy="16" r="9" fill="var(--surface)"/>
+      <circle cx="16" cy="16" r="5" fill="var(--accent-2)"/>
+      <rect x="14.5" y="3" width="3" height="5" rx="1.5" fill="var(--surface)"/>
+    </svg>
+    <span class="name">CS485 Robot Guide</span><small>People-following TurtleBot 4</small>
+  </div>
+  <div class="search">
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Search commands, errors, topics…" autocomplete="off" aria-label="Search the guide">
+    <span class="count" id="qcount"></span>
+    <kbd>/</kbd>
+  </div>
+  <button class="iconbtn" id="themeBtn" aria-label="Toggle dark mode" title="Toggle theme">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+  </button>
+</header>
+
+<div class="layout">
+<nav class="toc" id="toc" aria-label="Contents"><p class="label">Contents</p></nav>
+
+<main id="main">
+
+<div class="hero">
+  <h1>People-Following Robot</h1>
+  <p class="lead">Everything for the CS485 project in one place: how to set up a machine, run the
+  simulation, move the person around, fix what breaks, and how the pieces fit together.</p>
+  <div class="meta">
+    <span class="pill">ROS 2 <b>Jazzy</b></span>
+    <span class="pill">Gazebo <b>Harmonic</b></span>
+    <span class="pill">Robot <b>TurtleBot 4</b></span>
+    <span class="pill">Ubuntu <b>24.04</b></span>
+    <span class="pill">Last updated <b>2026-11-03</b></span>
+  </div>
+  <svg class="deco" width="230" height="140" viewBox="0 0 230 140" aria-hidden="true">
+    <path d="M10 120 C 60 120, 70 60, 120 60 S 190 30, 220 20" stroke="var(--accent)" stroke-width="2.5" fill="none" stroke-dasharray="6 6" class="d-flow"/>
+    <circle cx="40" cy="112" r="16" fill="var(--surface)" stroke="var(--accent)" stroke-width="3"/>
+    <circle cx="40" cy="112" r="6" fill="var(--accent)"/>
+    <circle cx="190" cy="34" r="7" fill="var(--accent-2)"/>
+    <rect x="183" y="42" width="14" height="30" rx="6" fill="var(--accent-2)"/>
+  </svg>
+</div>
+
+<!-- =============================================================== -->
+<section id="quickstart">
+  <h2>Quick start</h2>
+  <p>The machine is already set up and the repo is cloned? Pick a scenario. Every command runs from the
+  repo folder, and each terminal is its own window or tab.</p>
+
+  <div class="tabs" data-tabs>
+    <div class="tablist" role="tablist">
+      <button role="tab">Person walks waypoints</button>
+      <button role="tab">Drive the person</button>
+      <button role="tab">Drive the robot</button>
+      <button role="tab">Map &amp; navigate</button>
+    </div>
+    <div class="tabpanel">
+      <p>The person walks a loop on its own: the easiest setup for testing a follower.</p>
+      <div class="recipe">
+        <div class="term"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>Terminal 1 · simulation</span></div>
+          <pre><code>./scripts/launch_sim.sh world:=person_world</code></pre></div>
+        <div class="term"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>Terminal 2 · person walks</span></div>
+          <pre><code>./scripts/launch_human_waypoints.sh</code></pre></div>
+      </div>
+      <p class="muted">Default route: a 6 m square around the robot at 0.3 m/s, looping. Change it in
+      <code>src/people_follower/config/human_waypoints.yaml</code>, or with the <a href="#playground">waypoint planner</a> below.</p>
+    </div>
+    <div class="tabpanel">
+      <div class="recipe">
+        <div class="term"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>Terminal 1 · simulation</span></div>
+          <pre><code>./scripts/launch_sim.sh world:=person_world</code></pre></div>
+        <div class="term"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>Terminal 2 · keep focused</span></div>
+          <pre><code>./scripts/launch_human_teleop.sh</code></pre></div>
+      </div>
+      <p>Keys: <kbd>i</kbd> forward · <kbd>,</kbd> back · <kbd>j</kbd>/<kbd>l</kbd> turn ·
+      <kbd>k</kbd> stop · <kbd>q</kbd>/<kbd>z</kbd> faster/slower. The person keeps moving until you press <kbd>k</kbd>.</p>
+    </div>
+    <div class="tabpanel">
+      <div class="recipe">
+        <div class="term"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>Terminal 1 · simulation</span></div>
+          <pre><code>./scripts/launch_sim.sh            <span class="c"># box_room</span></code></pre></div>
+        <div class="term"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>Terminal 2 · keep focused</span></div>
+          <pre><code>./scripts/launch_teleop.sh</code></pre></div>
+      </div>
+      <p>Same keys as above. The TurtleBot 4 base takes <em>stamped</em> velocity commands, and the script sets that up for you.</p>
+    </div>
+    <div class="tabpanel">
+      <p>Navigation needs a saved map. warehouse, maze and depot ship with one. <code>box_room</code> and
+      <code>person_world</code> don't have one yet.</p>
+      <div class="recipe">
+        <div class="term"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>Make a map (guided)</span></div>
+          <pre><code>./scripts/make_map.sh box_room</code></pre></div>
+        <div class="term"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>Navigate automatically</span></div>
+          <pre><code>./scripts/nav_demo.sh world:=warehouse</code></pre></div>
+      </div>
+      <div class="callout warn"><span class="ic">!</span><p>On the WSL laptop the simulated lidar is broken on the
+      GPU (see <a href="#ts-lidar">troubleshooting</a>), so mapping and navigation only work there in slow software mode.
+      Use the lab machine.</p></div>
+    </div>
+  </div>
+
+  <h3>Check that everything is alive</h3>
+  <p>With a simulation running, this reports sensor rates, whether the robot is localized, and which navigation nodes are up:</p>
+  <pre><code>./scripts/check_sim.sh</code></pre>
+  <p>To stop: press <kbd>Ctrl</kbd>+<kbd>C</kbd> in each terminal. If something is left behind, run <code>./scripts/kill_sim.sh</code>.</p>
+</section>
+
+<!-- =============================================================== -->
+<section id="setup">
+  <h2>Machine setup</h2>
+  <p>A one-time job per machine. You need <strong>Ubuntu 24.04</strong> (Jazzy only supports 24.04) and sudo access.</p>
+
+  <div class="tabs" data-tabs>
+    <div class="tablist" role="tablist">
+      <button role="tab">Lab machine (Ubuntu, bash)</button>
+      <button role="tab">WSL2 laptop</button>
+    </div>
+    <div class="tabpanel">
+      <ol class="steps">
+        <li><b>Add the official ROS 2 apt repository</b>
+<pre><code>sudo apt update &amp;&amp; sudo apt install curl
+export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F\" '{print $4}')
+curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release &amp;&amp; echo $VERSION_CODENAME)_all.deb"
+sudo dpkg -i /tmp/ros2-apt-source.deb
+sudo apt update &amp;&amp; sudo apt upgrade</code></pre></li>
+        <li><b>Install ROS, Gazebo, TurtleBot 4 and Nav2</b>
+<pre><code>sudo apt install ros-jazzy-desktop ros-dev-tools ros-jazzy-ros-gz \
+  ros-jazzy-turtlebot4-simulator ros-jazzy-turtlebot4-desktop \
+  ros-jazzy-turtlebot4-navigation ros-jazzy-nav2-simple-commander
+sudo rosdep init &amp;&amp; rosdep update</code></pre>
+          <p class="muted">Gazebo Harmonic comes with <code>ros-jazzy-ros-gz</code>. Don't also add the OSRF Gazebo repository, because mixing the two causes conflicts.</p></li>
+        <li><b>Check the GPU</b>
+<pre><code>sudo apt install mesa-utils &amp;&amp; glxinfo -B | grep "renderer string"</code></pre>
+          <p>It should name the real GPU. If it says <code>llvmpipe</code>, the simulation will crawl. For NVIDIA:
+          <code>sudo ubuntu-drivers install</code>, then reboot.</p></li>
+        <li><b>Optional: load ROS in every new terminal</b>
+<pre><code>echo '[ -f /opt/ros/jazzy/setup.bash ] &amp;&amp; source /opt/ros/jazzy/setup.bash' &gt;&gt; ~/.bashrc</code></pre>
+          <p class="muted">The repo scripts load ROS themselves; this is only for typing <code>ros2</code>/<code>gz</code> by hand.</p></li>
+        <li><b>Get the code and build</b>
+<pre><code>git clone git@github.com:notBjorn/CS485-Project-People-Following-Robot.git
+cd CS485-Project-People-Following-Robot
+git switch person-world      <span class="c"># or main once things are merged</span>
+./scripts/build.sh</code></pre></li>
+        <li><b>Pre-download the person model</b> <span class="tag info">once</span>
+<pre><code>source /opt/ros/jazzy/setup.bash
+gz fuel download -u "https://fuel.gazebosim.org/1.0/OpenRobotics/models/Standing person"</code></pre></li>
+        <li><b>Smoke test</b> Run the <a href="#quickstart">quick start</a>, then check the lidar works:
+<pre><code>source scripts/env.sh
+ros2 topic echo --once /scan --field ranges</code></pre>
+          <p>Mostly <code>.inf</code> with values around 2.5 for the person in front = good.
+          Every value <code>0.16</code> = the <a href="#ts-lidar">GPU-lidar problem</a>.</p></li>
+      </ol>
+    </div>
+    <div class="tabpanel">
+      <p>The WSL2 distro <code>Ubuntu-ROS2</code> is already fully set up. What's different about it:</p>
+      <div class="grid">
+        <div class="card"><h4>GPU via D3D12 <span class="tag ok">fixed</span></h4>
+          <p>Mesa 25.x on Ubuntu 24.04 falls back to llvmpipe on WSL. <code>~/.zshrc</code> sets
+          <code>GALLIUM_DRIVER=d3d12</code> (only when <code>/dev/dxg</code> exists), which uses the NVIDIA GPU.</p></div>
+        <div class="card"><h4>GPU lidar <span class="tag bad">broken</span></h4>
+          <p>Under D3D12 every lidar ray reads 0.16 m. The camera is fine. Use the lab machine for lidar work, or
+          prefix <code>GALLIUM_DRIVER=llvmpipe</code> (correct, but about 10× slower).</p></div>
+        <div class="card"><h4>sudo needs a terminal <span class="tag info">note</span></h4>
+          <p>Run sudo commands in a real Ubuntu terminal, not through tools without a tty.
+          Forgot the password? See <a href="#ts-sudo">troubleshooting</a>.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================== -->
+<section id="architecture">
+  <h2>How it works</h2>
+  <p>Three layers talk to each other: <strong>Gazebo</strong> simulates the world and sensors, the
+  <strong>ros_gz bridge</strong> translates between Gazebo and ROS messages, and <strong>ROS 2 nodes</strong>
+  (TurtleBot 4 drivers, Nav2, our code, RViz) do the thinking.</p>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 900 430" role="img" aria-label="System architecture: Gazebo, bridge and ROS nodes">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--muted)"/></marker>
+      </defs>
+      <!-- Gazebo -->
+      <rect x="20" y="20" width="270" height="390" rx="14" class="d-group"/>
+      <text x="38" y="46" class="d-t">Gazebo Harmonic</text>
+      <rect x="40" y="62" width="230" height="150" rx="10" class="d-gz"/>
+      <text x="56" y="86" class="d-t">gz sim server</text>
+      <text x="56" y="108" class="d-s">physics (DART, 3 ms step)</text>
+      <text x="56" y="126" class="d-s">sensors: lidar, OAK-D camera</text>
+      <text x="56" y="144" class="d-s">robot + dock + walls + person</text>
+      <text x="56" y="162" class="d-s">VelocityControl · OdometryPublisher</text>
+      <text x="56" y="194" class="d-m">GPU renders the sensors</text>
+      <rect x="40" y="232" width="230" height="70" rx="10" class="d-gz"/>
+      <text x="56" y="258" class="d-t">gz sim GUI</text>
+      <text x="56" y="280" class="d-s">the 3D window you see</text>
+      <rect x="40" y="322" width="230" height="70" rx="10" class="d-box"/>
+      <text x="56" y="348" class="d-t">world .sdf</text>
+      <text x="56" y="370" class="d-s">box_room · person_world · TB4 worlds</text>
+
+      <!-- bridge -->
+      <rect x="345" y="120" width="190" height="190" rx="14" class="d-ros"/>
+      <text x="362" y="148" class="d-t">ros_gz_bridge</text>
+      <text x="362" y="170" class="d-s">parameter_bridge processes</text>
+      <text x="362" y="196" class="d-m">gz.msgs.LaserScan</text>
+      <text x="362" y="214" class="d-m">  ⇄ sensor_msgs/LaserScan</text>
+      <text x="362" y="238" class="d-m">gz.msgs.Twist</text>
+      <text x="362" y="256" class="d-m">  ⇄ geometry_msgs/Twist</text>
+      <text x="362" y="284" class="d-s">+ /clock (sim time)</text>
+
+      <!-- ROS -->
+      <rect x="590" y="20" width="290" height="390" rx="14" class="d-group"/>
+      <text x="608" y="46" class="d-t">ROS 2 Jazzy (ROS_DOMAIN_ID=30)</text>
+      <rect x="610" y="62" width="250" height="62" rx="10" class="d-ros"/>
+      <text x="626" y="86" class="d-t">TurtleBot 4 / Create 3 nodes</text>
+      <text x="626" y="106" class="d-s">robot_state, motion_control, dock…</text>
+      <rect x="610" y="136" width="250" height="62" rx="10" class="d-ros"/>
+      <text x="626" y="160" class="d-t">Nav2 · AMCL · SLAM</text>
+      <text x="626" y="180" class="d-s">only with nav2/localization/slam:=true</text>
+      <rect x="610" y="210" width="250" height="62" rx="10" class="d-ours"/>
+      <text x="626" y="234" class="d-t">our nodes</text>
+      <text x="626" y="254" class="d-s">human_waypoints · nav_automation_node</text>
+      <rect x="610" y="284" width="250" height="52" rx="10" class="d-ros"/>
+      <text x="626" y="315" class="d-t">RViz 2</text>
+      <rect x="610" y="348" width="250" height="44" rx="10" class="d-box"/>
+      <text x="626" y="375" class="d-s">teleop_twist_keyboard (you)</text>
+
+      <!-- flows -->
+      <path d="M270 150 C 310 150, 310 190, 345 190" class="d-flow2" marker-end="url(#ah)"/>
+      <path d="M535 200 C 570 200, 570 95, 610 95" class="d-flow" marker-end="url(#ah)"/>
+      <path d="M535 220 C 575 220, 575 167, 610 167" class="d-flow" marker-end="url(#ah)"/>
+      <path d="M610 241 C 570 241, 570 260, 535 260" class="d-flow3" marker-end="url(#ah)"/>
+      <path d="M345 260 C 310 260, 310 170, 270 170" class="d-flow3" marker-end="url(#ah)"/>
+      <path d="M535 240 C 575 240, 575 310, 610 310" class="d-flow" marker-end="url(#ah)"/>
+    </svg>
+    <figcaption>Sensor data flows from Gazebo through the bridge to ROS (orange → blue). Commands flow back the
+      other way (green): velocity for the robot and the person.</figcaption>
+    <div class="legend"><span class="lg-gz">Gazebo</span><span class="lg-ros">ROS 2 / bridge</span><span class="lg-ours">our code</span></div>
+  </figure>
+
+  <h3 id="launch-chain">What <code>launch_sim.sh</code> starts</h3>
+  <ol class="steps">
+    <li><b><code>scripts/env.sh</code></b> loads ROS and the workspace's <code>install/</code>, sets
+      <code>ROS_DOMAIN_ID=30</code>, keeps discovery on localhost, and sets <code>GZ_IP=127.0.0.1</code>. Every script sources it.</li>
+    <li><b><code>people_follower/launch/sim.launch.py</code></b> sets <code>GZ_SIM_RESOURCE_PATH</code> so Gazebo finds our
+      worlds and the TB4 models, then starts Gazebo with <code>&lt;world&gt;.sdf -r</code> (runs immediately) and a <code>/clock</code> bridge.</li>
+    <li><b>Map lookup</b> (<code>find_map</code>): if <code>map:=</code> isn't given, it looks for <code>&lt;world&gt;.yaml</code> in
+      <code>people_follower/maps</code>, then in TurtleBot 4's maps. A missing map only matters with <code>localization:=true</code>.</li>
+    <li><b><code>turtlebot4_gz_bringup/turtlebot4_spawn.launch.py</code></b> spawns the robot <em>on its dock</em> at
+      <code>x, y, yaw</code> and starts its bridges, the Create 3 and TB4 nodes, and, if requested, SLAM, localization, Nav2 and RViz.</li>
+  </ol>
+  <div class="callout info"><span class="ic">i</span><p>The world's <code>&lt;world name=…&gt;</code> must match its file name.
+  The TB4 bridges build topic names like <code>/world/&lt;world&gt;/…</code> from it.</p></div>
+
+  <h3 id="person">The person model</h3>
+  <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))">
+    <div class="card"><h4>Looks</h4><p>The mesh comes from the Fuel model <em>Standing person</em>, rotated so the model's +x axis is the way the person faces.
+      Starts at (2.5, 0), facing the robot.</p></div>
+    <div class="card"><h4>Collides</h4><p>A cylinder, 0.25 m radius and 1.8 m tall. Gazebo's DART physics can't collide with meshes. Gravity is off, so it never falls over.</p></div>
+    <div class="card"><h4>Moves</h4><p><code>VelocityControl</code> takes a body-frame Twist on <code>/model/human/cmd_vel</code>.
+      It <strong>keeps the last command</strong> until it gets a new one.</p></div>
+    <div class="card"><h4>Reports</h4><p><code>OdometryPublisher</code> publishes its true world pose at 20 Hz on
+      <code>/model/human/odometry</code>. That's useful as ground truth when testing the follower.</p></div>
+  </div>
+
+  <h3 id="waypoint-loop">How the waypoint walker steers</h3>
+  <figure class="diagram">
+    <svg viewBox="0 0 900 230" role="img" aria-label="Waypoint control loop">
+      <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="var(--muted)"/></marker></defs>
+      <rect x="20" y="70" width="210" height="90" rx="12" class="d-ours"/>
+      <text x="38" y="98" class="d-t">human_waypoints</text>
+      <text x="38" y="120" class="d-s">20 Hz: heading error →</text>
+      <text x="38" y="138" class="d-s">turn, then walk forward</text>
+      <rect x="345" y="20" width="210" height="70" rx="12" class="d-ros"/>
+      <text x="362" y="48" class="d-t">bridge</text>
+      <text x="362" y="70" class="d-m">/model/human/cmd_vel</text>
+      <rect x="345" y="140" width="210" height="70" rx="12" class="d-ros"/>
+      <text x="362" y="168" class="d-t">bridge</text>
+      <text x="362" y="190" class="d-m">/model/human/odometry</text>
+      <rect x="670" y="70" width="210" height="90" rx="12" class="d-gz"/>
+      <text x="688" y="98" class="d-t">person in Gazebo</text>
+      <text x="688" y="120" class="d-s">VelocityControl</text>
+      <text x="688" y="138" class="d-s">OdometryPublisher</text>
+      <path d="M230 95 C 290 95, 290 55, 345 55" class="d-flow3" marker-end="url(#ah2)"/>
+      <path d="M555 55 C 615 55, 615 95, 670 95" class="d-flow3" marker-end="url(#ah2)"/>
+      <path d="M670 135 C 615 135, 615 175, 555 175" class="d-flow2" marker-end="url(#ah2)"/>
+      <path d="M345 175 C 290 175, 290 135, 230 135" class="d-flow2" marker-end="url(#ah2)"/>
+    </svg>
+    <figcaption>Every 50 ms: angular speed = 2 × heading error (capped at <code>max_turn_rate</code>). If the error is under 60°, forward speed =
+      <code>speed</code> × cos(error); otherwise it turns on the spot. Within <code>tolerance</code> of a waypoint it pauses, then moves to the next one.</figcaption>
+  </figure>
+  <div class="callout warn"><span class="ic">!</span><p>Because Gazebo keeps the last velocity, both person scripts send a
+  <em>stop</em> directly to Gazebo when they exit. Kill them some other way and the person keeps walking; see
+  <a href="#ts-walking">troubleshooting</a>.</p></div>
+</section>
+
+<!-- =============================================================== -->
+<section id="playground">
+  <h2>Waypoint planner</h2>
+  <p>Click inside the arena to add waypoints for the person (drag to move, right-click to remove).
+  The YAML on the right updates as you go. Paste it into <code>src/people_follower/config/human_waypoints.yaml</code>, then run <code>./scripts/build.sh</code>.</p>
+  <div class="playground">
+    <canvas id="arena" width="640" height="640" aria-label="Waypoint planner: 25 m by 25 m arena"></canvas>
+    <div class="side">
+      <div class="btnrow">
+        <button class="btn primary" id="wpPlay">▶ Preview walk</button>
+        <button class="btn" id="wpSquare">Default square</button>
+        <button class="btn" id="wpClear">Clear</button>
+      </div>
+      <label class="muted" style="font-size:13.5px">Speed <b id="spdv">0.3</b> m/s
+        <input id="spd" type="range" min="0.1" max="1.2" step="0.05" value="0.3" style="width:100%"></label>
+      <label class="muted" style="font-size:13.5px;display:block;margin-top:6px"><input id="loop" type="checkbox" checked> loop</label>
+      <p class="muted" style="font-size:13px;margin:8px 0 0" id="wpStats"></p>
+      <pre><code id="yamlOut"></code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================== -->
+<section id="scripts">
+  <h2>Scripts reference</h2>
+  <p>Everything in <code>scripts/</code>. They can be run from any folder; <code>[brackets]</code> mean optional.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Script</th><th>Group</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>build.sh</code></td><td><span class="tag info">build</span></td><td>Installs missing dependencies (rosdep) and builds the workspace. Run it after adding files, nodes, worlds or maps.</td></tr>
+      <tr><td><code>clean_build.sh</code></td><td><span class="tag info">build</span></td><td>Deletes <code>build/ install/ log/</code> and rebuilds. Use it when a build acts stale after renaming or deleting files.</td></tr>
+      <tr><td><code>launch_sim.sh [args]</code></td><td><span class="tag ok">sim</span></td><td>Gazebo + TurtleBot 4 + RViz. Options: <code>world:= rviz:= x:= y:= yaw:= model:= slam:= localization:= nav2:= map:=</code></td></tr>
+      <tr><td><code>launch_teleop.sh</code></td><td><span class="tag ok">sim</span></td><td>Drive the robot from the keyboard (stamped Twist). Keep its terminal focused.</td></tr>
+      <tr><td><code>launch_human_teleop.sh</code></td><td><span class="tag ok">person</span></td><td>Drive the person in <code>person_world</code> from the keyboard. Stops the person on exit.</td></tr>
+      <tr><td><code>launch_human_waypoints.sh [params_file:=…]</code></td><td><span class="tag ok">person</span></td><td>Walk the person through the waypoints in <code>config/human_waypoints.yaml</code>. Stops the person on exit. Don't run it together with human teleop.</td></tr>
+      <tr><td><code>list_worlds.sh</code></td><td><span class="tag ok">sim</span></td><td>Lists every world you can launch, whether it has a saved map, and which ones download models on first run.</td></tr>
+      <tr><td><code>kill_sim.sh</code></td><td><span class="tag warn">cleanup</span></td><td>Stops all leftover Gazebo, bridge, RViz, Nav2 and node processes. Also stops <em>any</em> other ROS 2 nodes on the machine.</td></tr>
+      <tr><td><code>make_map.sh [world]</code></td><td><span class="tag info">mapping</span></td><td>Guided mapping: SLAM + teleop, then saves on Enter and rebuilds. The map is named after the world.</td></tr>
+      <tr><td><code>launch_slam.sh [args]</code></td><td><span class="tag info">mapping</span></td><td>Simulation with SLAM only, for mapping by hand.</td></tr>
+      <tr><td><code>save_map.sh [name]</code></td><td><span class="tag info">mapping</span></td><td>Saves the current SLAM map to <code>src/people_follower/maps/&lt;name&gt;.yaml/.pgm</code>.</td></tr>
+      <tr><td><code>nav_demo.sh [sim args] [-- node args]</code></td><td><span class="tag info">nav</span></td><td>One command: sim + localization + Nav2, waits for Nav2 to be active, then runs <code>nav_automation_node</code>.</td></tr>
+      <tr><td><code>launch_nav.sh [args]</code></td><td><span class="tag info">nav</span></td><td>Simulation with AMCL + Nav2 on the world's saved map.</td></tr>
+      <tr><td><code>launch_nav_node.sh [-p k:=v]</code></td><td><span class="tag info">nav</span></td><td>Runs <code>nav_automation_node</code> against a running <code>launch_nav.sh</code>. Parameters: <code>goal_x goal_y initial_x initial_y …</code></td></tr>
+      <tr><td><code>set_initial_pose.sh [x] [y] [deg]</code></td><td><span class="tag info">nav</span></td><td>Tells AMCL where the robot is, like RViz's "2D Pose Estimate".</td></tr>
+      <tr><td><code>send_goal.sh &lt;x&gt; &lt;y&gt; [deg]</code></td><td><span class="tag info">nav</span></td><td>Sends a single Nav2 goal from the terminal and shows progress.</td></tr>
+      <tr><td><code>check_sim.sh</code></td><td><span class="tag warn">debug</span></td><td>Health check: sensor topics and rates, the map → base_link transform, and Nav2 node states.</td></tr>
+      <tr><td><code>record_bag.sh [name] [--no-camera]</code></td><td><span class="tag warn">debug</span></td><td>Records sensors, TF, commands and nav topics to <code>bags/</code> (git-ignored). Replay with <code>ros2 bag play bags/&lt;dir&gt; --clock</code>.</td></tr>
+      <tr><td><code>env.sh</code></td><td><span class="tag">sourced</span></td><td>Not run directly. Use <code>source scripts/env.sh</code> in a terminal to use <code>ros2</code> by hand on domain 30.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- =============================================================== -->
+<section id="worlds">
+  <h2>Worlds</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>World</th><th>Source</th><th>Map</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>person_world</code></td><td>ours</td><td><span class="tag warn">none</span></td><td>25 × 25 m walled square + one movable person. Walls are 12.5 m from the center, just past the lidar's 12 m range.</td></tr>
+      <tr><td><code>box_room</code></td><td>ours</td><td><span class="tag warn">none</span></td><td>Empty 10 × 10 m walled room (default world).</td></tr>
+      <tr><td><code>warehouse</code></td><td>TurtleBot 4</td><td><span class="tag ok">yes</span></td><td>Downloads Fuel models on first launch (the window stays black until they finish).</td></tr>
+      <tr><td><code>maze</code></td><td>TurtleBot 4</td><td><span class="tag ok">yes</span></td><td>No downloads.</td></tr>
+      <tr><td><code>depot</code></td><td>TurtleBot 4</td><td><span class="tag ok">yes</span></td><td>Downloads Fuel models on first launch.</td></tr>
+    </tbody>
+  </table></div>
+  <p><code>./scripts/list_worlds.sh</code> prints this table from what's actually installed.</p>
+</section>
+
+<!-- =============================================================== -->
+<section id="topics">
+  <h2>Topics</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Topic</th><th>Type</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>/scan</code></td><td>sensor_msgs/LaserScan</td><td>RPLIDAR: 640 rays over 360°, range 0.16–12 m. Mounted rotated, so <strong>straight ahead ≈ −90°</strong> in the scan.</td></tr>
+      <tr><td><code>/oakd/rgb/preview/image_raw</code></td><td>sensor_msgs/Image</td><td>OAK-D RGB, 320×240 <code>rgb8</code>, about 25 Hz on a GPU.</td></tr>
+      <tr><td><code>/oakd/rgb/preview/depth</code></td><td>sensor_msgs/Image</td><td>Depth image.</td></tr>
+      <tr><td><code>/cmd_vel</code></td><td>geometry_msgs/TwistStamped</td><td>Drive the robot (must be <em>stamped</em>).</td></tr>
+      <tr><td><code>/odom</code></td><td>nav_msgs/Odometry</td><td>Robot odometry.</td></tr>
+      <tr><td><code>/clock</code></td><td>rosgraph_msgs/Clock</td><td>Sim time. Nodes use <code>use_sim_time:=true</code>.</td></tr>
+      <tr><td><code>/map</code>, <code>/amcl_pose</code>, <code>/plan</code>, <code>/goal_pose</code></td><td>nav types</td><td>Only with SLAM/localization/Nav2 running.</td></tr>
+      <tr><td><code>/model/human/cmd_vel</code></td><td>geometry_msgs/Twist</td><td>Person velocity, body frame (x = forward). ROS → Gazebo.</td></tr>
+      <tr><td><code>/model/human/odometry</code></td><td>nav_msgs/Odometry</td><td>Person's true world pose, 20 Hz. Gazebo → ROS.</td></tr>
+    </tbody>
+  </table></div>
+  <p>Handy commands (after <code>source scripts/env.sh</code>):</p>
+<pre><code>ros2 topic list
+ros2 topic hz /oakd/rgb/preview/image_raw
+ros2 topic echo --once /model/human/odometry --field pose.pose.position
+gz model -m human -p                      <span class="c"># person pose straight from Gazebo</span></code></pre>
+</section>
+
+<!-- =============================================================== -->
+<section id="mapping">
+  <h2>Mapping &amp; navigation</h2>
+  <ol class="steps">
+    <li><b>Make a map</b> Once per world: <code>./scripts/make_map.sh &lt;world&gt;</code>. Drive the whole area with teleop
+      while watching the map grow in RViz, then press Enter. If no new terminal opens for teleop, run <code>./scripts/launch_teleop.sh</code> yourself.</li>
+    <li><b>Commit the map</b> <code>src/people_follower/maps/&lt;world&gt;.yaml</code> and <code>.pgm</code>, so the team has it.</li>
+    <li><b>Navigate</b> <code>./scripts/launch_nav.sh world:=&lt;world&gt;</code>, then set "2D Pose Estimate" and click "Nav2 Goal" in RViz, or
+      run <code>./scripts/send_goal.sh 2 1</code>.</li>
+    <li><b>Automate</b> <code>./scripts/nav_demo.sh world:=&lt;world&gt; -- -p goal_x:=3.0 -p goal_y:=-2.0</code> docks, localizes, undocks and drives.</li>
+  </ol>
+  <div class="callout warn"><span class="ic">!</span><p>Not yet verified end to end. The warehouse test on the WSL laptop
+  was stopped during the first-time model download, and the WSL lidar issue blocks localization there anyway. Try it first on the lab machine.</p></div>
+</section>
+
+<!-- =============================================================== -->
+<section id="troubleshooting">
+  <h2>Troubleshooting</h2>
+  <p>Click a problem to expand it. The search box at the top filters these too.</p>
+  <div class="filters" id="tsFilters">
+    <button class="on" data-f="all">All</button>
+    <button data-f="build">Build</button>
+    <button data-f="sim">Simulation</button>
+    <button data-f="gpu">GPU</button>
+    <button data-f="person">Person</button>
+    <button data-f="nav">Navigation</button>
+    <button data-f="system">System</button>
+  </div>
+
+  <details class="issue" data-cat="build">
+    <summary><span class="tag info">build</span> "Workspace not built yet" / "Package 'people_follower' not found"</summary>
+    <div class="body"><p>The workspace has no <code>install/</code> folder yet, or a new file hasn't been built.</p>
+<pre><code>./scripts/build.sh
+./scripts/clean_build.sh      <span class="c"># if it still acts stale</span></code></pre></div>
+  </details>
+
+  <details class="issue" data-cat="build">
+    <summary><span class="tag info">build</span> build.sh succeeds, but launch says a TurtleBot / Nav2 package is missing</summary>
+    <div class="body"><p><code>build.sh</code> runs <code>rosdep install … || true</code>: if rosdep needs sudo and can't get it, the failure is hidden.
+      Install the packages yourself (see <a href="#setup">setup step 2</a>) and check:</p>
+<pre><code>source /opt/ros/jazzy/setup.bash
+rosdep check --from-paths src --ignore-src</code></pre></div>
+  </details>
+
+  <details class="issue" data-cat="sim">
+    <summary><span class="tag ok">sim</span> No topics show up in another terminal</summary>
+    <div class="body"><p>Every terminal must be on the same <code>ROS_DOMAIN_ID</code> (30) with localhost discovery. Use the scripts, or:</p>
+<pre><code>source scripts/env.sh
+ros2 topic list</code></pre></div>
+  </details>
+
+  <details class="issue" data-cat="sim">
+    <summary><span class="tag ok">sim</span> The Gazebo window is black</summary>
+    <div class="body"><p>Usually the first launch of a world that uses Fuel models (warehouse, depot): Gazebo downloads them before showing anything.
+      Wait and watch the cache grow. Later launches are fast.</p>
+<pre><code>du -sh ~/.gz/fuel</code></pre>
+      <p>If it stays black with no download, check the GPU (<a href="#ts-slow">next item</a>).</p></div>
+  </details>
+
+  <details class="issue" data-cat="gpu sim" id="ts-slow">
+    <summary><span class="tag warn">gpu</span> Everything is slow / camera updates rarely</summary>
+    <div class="body"><p>Probably software rendering (llvmpipe). Check:</p>
+<pre><code>glxinfo -B | grep "renderer string"</code></pre>
+      <h5>Lab machine</h5><p>Install the GPU driver (<code>sudo ubuntu-drivers install</code>, reboot).</p>
+      <h5>WSL laptop</h5><p><code>echo $GALLIUM_DRIVER</code> should print <code>d3d12</code>. A shell started before the
+        <code>~/.zshrc</code> change won't have it, so open a new one.</p>
+      <p>Measured on the WSL laptop with the TurtleBot 4 sim:</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th></th><th>D3D12 (GPU)</th><th>llvmpipe (CPU)</th></tr></thead>
+        <tbody>
+          <tr><td>Real-time factor</td><td class="num">0.88</td><td class="num">0.10</td></tr>
+          <tr><td>Camera rate</td><td class="num">~25 Hz</td><td class="num">~5 Hz</td></tr>
+          <tr><td>Gazebo window</td><td class="num">~70 FPS</td><td class="num">~12 FPS</td></tr>
+          <tr><td>gz server CPU</td><td class="num">~1.2 cores</td><td class="num">~4.4 cores</td></tr>
+        </tbody>
+      </table></div></div>
+  </details>
+
+  <details class="issue" data-cat="gpu sim" id="ts-lidar">
+    <summary><span class="tag bad">gpu</span> Every <code>/scan</code> value is 0.16 <span class="sym">WSL only</span></summary>
+    <div class="body"><p>Gazebo's GPU lidar is broken under Mesa's D3D12 driver on WSL: every ray reads the minimum range. The camera renders fine.
+      In software mode it's correct (the person at 2.5 m appears at about −90°). Walls don't change it.</p>
+<pre><code>GALLIUM_DRIVER=llvmpipe ./scripts/launch_sim.sh world:=person_world   <span class="c"># correct but slow</span></code></pre>
+      <p>Expected to be fine on a native Linux GPU. Verify once on the lab machine with the smoke test in <a href="#setup">setup</a>.</p></div>
+  </details>
+
+  <details class="issue" data-cat="person" id="ts-walking">
+    <summary><span class="tag ok">person</span> The person keeps walking after I stopped the script</summary>
+    <div class="body"><p>Gazebo's <code>VelocityControl</code> keeps the last command. The scripts send a stop when they exit,
+      but not if they're killed hard. Stop the person directly:</p>
+<pre><code>source scripts/env.sh
+gz topic -t /model/human/cmd_vel -m gz.msgs.Twist -p "linear: {x: 0}"</code></pre></div>
+  </details>
+
+  <details class="issue" data-cat="person">
+    <summary><span class="tag ok">person</span> The person doesn't move</summary>
+    <div class="body"><ul>
+      <li>Is the sim running <code>world:=person_world</code>? Other worlds have no person.</li>
+      <li>Teleop: its terminal must be focused while you press keys.</li>
+      <li>Are teleop and waypoints both running? They fight over the same topic. Run only one.</li>
+      <li>Waypoints stuck on "Waiting for /model/human/odometry": rebuild (<code>./scripts/build.sh</code>) so the updated world is installed.</li>
+    </ul></div>
+  </details>
+
+  <details class="issue" data-cat="sim system">
+    <summary><span class="tag warn">cleanup</span> The next launch misbehaves / old processes are still running</summary>
+    <div class="body"><p>Closing windows instead of pressing <kbd>Ctrl</kbd>+<kbd>C</kbd> can leave dozens of nodes running. Check and clean up:</p>
+<pre><code>pgrep -af "gz sim|parameter_bridge|rviz2"
+./scripts/kill_sim.sh</code></pre></div>
+  </details>
+
+  <details class="issue" data-cat="nav">
+    <summary><span class="tag info">nav</span> "No map found for this world"</summary>
+    <div class="body"><p><code>box_room</code> and <code>person_world</code> don't have maps yet. Make one with <code>./scripts/make_map.sh &lt;world&gt;</code>,
+      use warehouse/maze/depot, or pass <code>map:=/path/to/map.yaml</code>.</p></div>
+  </details>
+
+  <details class="issue" data-cat="nav">
+    <summary><span class="tag info">nav</span> The robot doesn't move in Nav2 / RViz shows no map</summary>
+    <div class="body"><p>AMCL needs to know where the robot is. Set "2D Pose Estimate" in RViz, or:</p>
+<pre><code>./scripts/set_initial_pose.sh 0 0 0</code></pre>
+      <p>Make sure the node's <code>initial_x/initial_y</code> match where the robot spawned.</p></div>
+  </details>
+
+  <details class="issue" data-cat="sim">
+    <summary><span class="tag ok">sim</span> "Desired controller update period … faster than the gazebo simulation period"</summary>
+    <div class="body"><p>Harmless. It appears with the stock TurtleBot 4 worlds too.</p></div>
+  </details>
+
+  <details class="issue" data-cat="system" id="ts-sudo">
+    <summary><span class="tag">system</span> Forgot the sudo password on WSL</summary>
+    <div class="body"><p>From Windows PowerShell:</p>
+<pre><code>wsl -d Ubuntu-ROS2 -u root
+passwd brevski
+exit</code></pre></div>
+  </details>
+
+  <details class="issue" data-cat="system">
+    <summary><span class="tag">system</span> "sudo: a terminal is required to read the password"</summary>
+    <div class="body"><p>The command ran somewhere without a real terminal (an editor or AI tool's shell). Run it in a normal Ubuntu terminal window.</p></div>
+  </details>
+</section>
+
+<!-- =============================================================== -->
+<section id="layout">
+  <h2>Repository layout</h2>
+<div class="tree"><span class="d">CS485-Project-People-Following-Robot/</span>
+├── <span class="d">docs/</span>guide.html                 <span class="n">this page</span>
+├── <span class="d">scripts/</span>                         <span class="n">see Scripts reference</span>
+├── <span class="d">src/</span>
+│   ├── <span class="d">people_follower/</span>             <span class="n">our package (ament_python)</span>
+│   │   ├── <span class="d">launch/</span>sim.launch.py      <span class="n">Gazebo + TB4 spawn + RViz</span>
+│   │   ├── <span class="d">launch/</span>human_waypoints.launch.py
+│   │   ├── <span class="d">people_follower/</span>human_waypoints.py   <span class="n">Python nodes live here</span>
+│   │   ├── <span class="d">config/</span>human_waypoints.yaml
+│   │   ├── <span class="d">worlds/</span>box_room.sdf, person_world.sdf
+│   │   ├── <span class="d">maps/</span>                    <span class="n">saved SLAM maps (&lt;world&gt;.yaml/.pgm)</span>
+│   │   └── setup.py                 <span class="n">register nodes in entry_points</span>
+│   └── <span class="d">turtlebot4_waypoint_auto_nav/</span>  <span class="n">Madalynn's Nav2 automation node</span>
+├── build/ install/ log/             <span class="n">colcon output (git-ignored)</span>
+├── README.md · RUN_DIRECTIONS.txt
+└── bags/                            <span class="n">recorded runs (git-ignored)</span></div>
+</section>
+
+<!-- =============================================================== -->
+<section id="workflow">
+  <h2>Development workflow</h2>
+  <figure class="diagram">
+    <svg viewBox="0 0 900 190" role="img" aria-label="Branch layout">
+      <line x1="40" y1="50" x2="860" y2="50" class="d-line"/>
+      <text x="40" y="30" class="d-t">main</text>
+      <circle cx="90" cy="50" r="8" fill="var(--surface)" stroke="var(--muted)" stroke-width="2"/>
+      <text x="70" y="78" class="d-m">ec6288c</text>
+      <circle cx="210" cy="50" r="8" fill="var(--surface)" stroke="var(--muted)" stroke-width="2"/>
+      <text x="168" y="78" class="d-m">environment setup</text>
+      <path d="M210 50 C 260 50, 260 120, 320 120 L 860 120" class="d-line"/>
+      <circle cx="380" cy="120" r="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/>
+      <text x="330" y="148" class="d-m">pathing-integration</text>
+      <path d="M380 120 C 430 120, 430 165, 490 165 L 860 165" class="d-flow3"/>
+      <circle cx="560" cy="165" r="8" fill="var(--ok-soft)" stroke="var(--ok)" stroke-width="2"/>
+      <circle cx="700" cy="165" r="8" fill="var(--ok-soft)" stroke="var(--ok)" stroke-width="2"/>
+      <text x="600" y="186" class="d-m">person-world (2 commits)</text>
+      <text x="700" y="112" class="d-s">merge pathing-integration first,</text>
+      <text x="700" y="96" class="d-s">then person-world → main</text>
+    </svg>
+    <figcaption>Current branches. <code>MadsHein-patch-1</code> only duplicates a <code>.gitignore</code> line and can be closed.</figcaption>
+  </figure>
+  <div class="grid">
+    <div class="card"><h4>Daily loop</h4><p><code>git pull</code> → <code>git switch -c my-feature</code> → build &amp; test → commit → push → pull request into <code>main</code>.</p></div>
+    <div class="card"><h4>When to rebuild</h4><p>After adding files, worlds, maps, launch files or nodes. Edits to <em>existing</em> Python files apply immediately (symlink install).</p></div>
+    <div class="card"><h4>Add a node</h4><p>Put it in <code>src/people_follower/people_follower/</code>, add it to <code>entry_points</code> in <code>setup.py</code>, rebuild, then <code>ros2 run people_follower &lt;name&gt;</code>.</p></div>
+    <div class="card"><h4>Add a world</h4><p>Drop <code>&lt;name&gt;.sdf</code> into <code>worlds/</code> with <code>&lt;world name='&lt;name&gt;'&gt;</code>, rebuild, then launch with <code>world:=&lt;name&gt;</code>. Copy the plugins from an existing world.</p></div>
+  </div>
+</section>
+
+<!-- =============================================================== -->
+<section id="changelog">
+  <h2>Changelog</h2>
+  <div class="timeline">
+    <div class="ev major"><time>2026-11-03</time><h4>Waypoint walking for the person</h4>
+      <p><code>human_waypoints</code> node + <code>launch_human_waypoints.sh</code>; the person now publishes odometry and faces its walking direction. <span class="muted">(person-world · 28416c6)</span></p></div>
+    <div class="ev major"><time>2026-11-03</time><h4>person_world</h4>
+      <p>25 × 25 m walled square with a keyboard-driven person (<code>launch_human_teleop.sh</code>). <span class="muted">(person-world · 30e11e9)</span></p></div>
+    <div class="ev"><time>2026-11-03</time><h4>WSL laptop fully set up</h4>
+      <p>TurtleBot 4 + Nav2 packages installed, D3D12 GPU fix, GPU lidar issue found on WSL.</p></div>
+    <div class="ev"><time>2026-10-29</time><h4>Pathing integration</h4>
+      <p>Madalynn's <code>turtlebot4_waypoint_auto_nav</code>, the SLAM/Nav2 launch options and 14 helper scripts. <span class="muted">(pathing-integration · 29da646, Julian)</span></p></div>
+    <div class="ev"><time>2026-10-22</time><h4>Environment setup</h4>
+      <p><code>sim.launch.py</code>, <code>box_room</code>, build/sim/teleop scripts. <span class="muted">(main · 9975dde, Julian)</span></p></div>
+  </div>
+</section>
+
+<div class="empty" id="noResults">No matches. Try a shorter search, or clear the box with <kbd>Esc</kbd>.</div>
+
+<footer>CS485 People-Following Robot · one self-contained file, edit it freely (instructions in the HTML comment at the top).</footer>
+</main>
+</div>
+
+<button class="iconbtn totop" id="toTop" aria-label="Back to top">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 15 6-6 6 6"/></svg>
+</button>
+
+<script>
+(() => {
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
+  };
+
+  /* ---------- theme ---------- */
+  const saved = store.get('cs485-theme');
+  if (saved) document.documentElement.dataset.theme = saved;
+  $('#themeBtn').addEventListener('click', () => {
+    const dark = getComputedStyle(document.documentElement).colorScheme === 'dark';
+    const next = dark ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    store.set('cs485-theme', next);
+  });
+
+  /* ---------- numbered headings + table of contents ---------- */
+  const toc = $('#toc');
+  const sections = $$('main > section[id]');
+  sections.forEach((sec, i) => {
+    const h2 = $('h2', sec);
+    const num = document.createElement('span');
+    num.className = 'num';
+    num.textContent = i + 1;
+    h2.prepend(num);
+    const a = document.createElement('a');
+    a.href = '#' + sec.id;
+    a.textContent = h2.textContent.replace(/^\d+/, '');
+    a.dataset.sec = sec.id;
+    toc.append(a);
+    $$('h3', sec).forEach((h3, j) => {
+      if (!h3.id) h3.id = sec.id + '-' + (j + 1);
+      const s = document.createElement('a');
+      s.href = '#' + h3.id;
+      s.textContent = h3.textContent;
+      s.className = 'sub';
+      s.dataset.sec = sec.id;
+      toc.append(s);
+    });
+  });
+  toc.addEventListener('click', e => { if (e.target.tagName === 'A') document.body.classList.remove('menu-open'); });
+  $('#menuBtn').addEventListener('click', () => document.body.classList.toggle('menu-open'));
+
+  /* scrollspy */
+  const links = $$('a[data-sec]', toc);
+  const spy = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      const id = en.target.id;
+      links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + id));
+    });
+  }, { rootMargin: '-70px 0px -70% 0px' });
+  sections.forEach(s => spy.observe(s));
+
+  /* ---------- copy buttons ---------- */
+  $$('pre').forEach(pre => {
+    if (pre.closest('.playground')) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'code';
+    pre.replaceWith(wrap);
+    wrap.append(pre);
+    addCopy(wrap, () => {
+      const clone = pre.cloneNode(true);
+      $$('.c, .p', clone).forEach(n => n.remove());
+      return clone.textContent.replace(/[ \t]+$/gm, '').trim();
+    });
+  });
+  function addCopy(wrap, getText) {
+    const b = document.createElement('button');
+    b.className = 'copy';
+    b.textContent = 'Copy';
+    b.addEventListener('click', async () => {
+      const text = getText();
+      try { await navigator.clipboard.writeText(text); }
+      catch {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.append(ta); ta.select();
+        try { document.execCommand('copy'); } catch { /* ignore */ }
+        ta.remove();
+      }
+      b.textContent = 'Copied ✓'; b.classList.add('done');
+      setTimeout(() => { b.textContent = 'Copy'; b.classList.remove('done'); }, 1400);
+    });
+    wrap.append(b);
+  }
+
+  /* ---------- tabs ---------- */
+  $$('[data-tabs]').forEach(t => {
+    const btns = $$('.tablist button', t);
+    const panels = $$(':scope > .tabpanel', t);
+    const show = i => {
+      btns.forEach((b, j) => b.setAttribute('aria-selected', String(i === j)));
+      panels.forEach((p, j) => p.classList.toggle('active', i === j));
+    };
+    btns.forEach((b, i) => b.addEventListener('click', () => show(i)));
+    show(0);
+  });
+
+  /* ---------- troubleshooting filters ---------- */
+  let tsFilter = 'all';
+  $('#tsFilters').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    tsFilter = b.dataset.f;
+    $$('#tsFilters button').forEach(x => x.classList.toggle('on', x === b));
+    applySearch();
+  });
+  /* open a troubleshooting item when linked to */
+  const openHash = () => {
+    const el = location.hash && document.getElementById(location.hash.slice(1));
+    if (el && el.tagName === 'DETAILS') el.open = true;
+  };
+  window.addEventListener('hashchange', openHash);
+  openHash();
+
+  /* ---------- search ---------- */
+  const q = $('#q');
+  const marks = [];
+  function clearMarks() {
+    marks.splice(0).forEach(m => m.replaceWith(document.createTextNode(m.textContent)));
+    document.normalize();
+  }
+  function highlight(root, term) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: n => n.parentElement.closest('script, style, svg, .copy, canvas') || !n.nodeValue.toLowerCase().includes(term)
+        ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(n => {
+      const i = n.nodeValue.toLowerCase().indexOf(term);
+      const after = n.splitText(i);
+      after.splitText(term.length);
+      const m = document.createElement('mark');
+      m.textContent = after.nodeValue;
+      after.replaceWith(m);
+      marks.push(m);
+    });
+  }
+  function applySearch() {
+    clearMarks();
+    const term = q.value.trim().toLowerCase();
+    let hits = 0;
+    $$('.issue').forEach(d => {
+      const catOk = tsFilter === 'all' || (d.dataset.cat || '').split(' ').includes(tsFilter);
+      const txtOk = !term || d.textContent.toLowerCase().includes(term);
+      d.classList.toggle('hidden', !(catOk && txtOk));
+      if (term && catOk && txtOk) d.open = true;
+    });
+    $$('main tbody tr').forEach(tr => tr.classList.toggle('hidden', !!term && !tr.textContent.toLowerCase().includes(term)));
+    sections.forEach(sec => {
+      const match = !term || sec.textContent.toLowerCase().includes(term);
+      sec.classList.toggle('hidden', !match);
+      if (match && term) { hits++; highlight(sec, term); }
+    });
+    links.forEach(l => l.classList.toggle('hidden', !!term && $('#' + l.dataset.sec).classList.contains('hidden')));
+    $('.hero').style.display = term ? 'none' : '';
+    $('#qcount').textContent = term ? `${marks.length} hit${marks.length === 1 ? '' : 's'}` : '';
+    $('#noResults').classList.toggle('show', !!term && hits === 0);
+  }
+  let timer;
+  q.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(applySearch, 120); });
+  document.addEventListener('keydown', e => {
+    if (e.key === '/' && document.activeElement !== q && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) {
+      e.preventDefault(); q.focus(); q.select();
+    } else if (e.key === 'Escape' && document.activeElement === q) {
+      q.value = ''; applySearch(); q.blur();
+    }
+  });
+
+  /* ---------- back to top ---------- */
+  const top = $('#toTop');
+  window.addEventListener('scroll', () => top.classList.toggle('show', scrollY > 900), { passive: true });
+  top.addEventListener('click', () => scrollTo({ top: 0 }));
+
+  /* ---------- waypoint planner ---------- */
+  const cv = $('#arena');
+  const ctx = cv.getContext('2d');
+  const HALF = 12.5;                       // walls at +/-12.5 m
+  const VIEW = 14.4;                       // metres from centre to canvas edge (room for labels)
+  let pts = [];
+  let drag = -1, anim = null;
+  const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  let dpr = 1;
+
+  function size() {
+    const r = cv.getBoundingClientRect();
+    dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(r.width * dpr);
+    cv.height = Math.round(r.width * dpr);
+    draw();
+  }
+  const scale = () => cv.width / (2 * VIEW);
+  // world x is up on screen (robot faces +x = up), world y is left
+  const toPx = (x, y) => [cv.width / 2 - y * scale(), cv.height / 2 - x * scale()];
+  const toWorld = (px, py) => [(cv.height / 2 - py) / scale(), (cv.width / 2 - px) / scale()];
+  const round = v => Math.round(v * 10) / 10;
+
+  function draw(person) {
+    const s = scale();
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.fillStyle = css('--surface'); ctx.fillRect(0, 0, cv.width, cv.height);
+    // grid every metre, stronger every 5 m
+    for (let m = -12; m <= 12; m++) {
+      ctx.strokeStyle = css('--border');
+      ctx.lineWidth = m % 5 === 0 ? 1.5 : 0.6;
+      ctx.globalAlpha = m % 5 === 0 ? 1 : 0.6;
+      const [ax, ay] = toPx(m, -HALF), [bx, by] = toPx(m, HALF);
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+      const [cx, cy] = toPx(-HALF, m), [dx, dy] = toPx(HALF, m);
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(dx, dy); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // walls
+    ctx.strokeStyle = css('--muted'); ctx.lineWidth = 0.2 * s;
+    const [wx, wy] = toPx(HALF + 0.1, HALF + 0.1);
+    ctx.strokeRect(wx, wy, (2 * HALF + 0.2) * s, (2 * HALF + 0.2) * s);
+    // lidar range from the spawn
+    const [ox, oy] = toPx(0, 0);
+    ctx.setLineDash([6, 6]); ctx.strokeStyle = css('--accent'); ctx.lineWidth = 1; ctx.globalAlpha = .5;
+    ctx.beginPath(); ctx.arc(ox, oy, 12 * s, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    // robot at spawn, facing +x (up)
+    ctx.fillStyle = css('--accent');
+    ctx.beginPath(); ctx.arc(ox, oy, 0.17 * s + 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = css('--surface');
+    ctx.beginPath(); ctx.moveTo(ox, oy - 0.17 * s - 2); ctx.lineTo(ox - 4, oy); ctx.lineTo(ox + 4, oy); ctx.fill();
+    // person start
+    const [hx, hy] = toPx(2.5, 0);
+    ctx.strokeStyle = css('--accent-2'); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(hx, hy, 0.25 * s, 0, Math.PI * 2); ctx.stroke();
+    // path
+    if (pts.length) {
+      ctx.strokeStyle = css('--ok'); ctx.lineWidth = 2.5; ctx.setLineDash([8, 6]);
+      ctx.beginPath(); ctx.moveTo(hx, hy);
+      pts.forEach(p => ctx.lineTo(...toPx(p[0], p[1])));
+      if ($('#loop').checked && pts.length > 1) ctx.lineTo(...toPx(pts[0][0], pts[0][1]));
+      ctx.stroke(); ctx.setLineDash([]);
+      pts.forEach((p, i) => {
+        const [px, py] = toPx(p[0], p[1]);
+        ctx.fillStyle = css('--ok');
+        ctx.beginPath(); ctx.arc(px, py, 11 * dpr, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = `600 ${12 * dpr}px system-ui`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(String(i + 1), px, py + 0.5);
+      });
+    }
+    // animated person
+    if (person) {
+      const [px, py] = toPx(person[0], person[1]);
+      ctx.fillStyle = css('--accent-2');
+      ctx.beginPath(); ctx.arc(px, py, 0.25 * s + 3, 0, Math.PI * 2); ctx.fill();
+    }
+    // labels
+    ctx.fillStyle = css('--muted'); ctx.font = `${11 * dpr}px system-ui`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('+x ↑  robot faces up · grid 1 m · dashed circle = 12 m lidar range', 8, 8);
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('+y ←', 8, cv.height - 8);
+  }
+
+  function update() {
+    const flat = pts.map(p => `${p[0].toFixed(1)}, ${p[1].toFixed(1)}`).join(', ');
+    const spd = +$('#spd').value;
+    $('#spdv').textContent = spd.toFixed(2).replace(/0$/, '');
+    $('#yamlOut').textContent =
+`human_waypoints:
+  ros__parameters:
+    waypoints: [${flat}]
+    speed: ${spd}
+    max_turn_rate: 1.0
+    tolerance: 0.2
+    loop: ${$('#loop').checked}
+    pause: 1.0`;
+    let len = 0, prev = [2.5, 0];
+    const route = $('#loop').checked && pts.length > 1 ? [...pts, pts[0]] : pts;
+    route.forEach(p => { len += Math.hypot(p[0] - prev[0], p[1] - prev[1]); prev = p; });
+    $('#wpStats').textContent = pts.length
+      ? `${pts.length} waypoint${pts.length > 1 ? 's' : ''} · ${len.toFixed(1)} m · ≈ ${Math.round(len / spd + pts.length)} s per pass`
+      : 'No waypoints yet. Click the arena.';
+    draw();
+  }
+
+  function pick(e) {
+    const r = cv.getBoundingClientRect(), dpr = cv.width / r.width;
+    return [(e.clientX - r.left) * dpr, (e.clientY - r.top) * dpr];
+  }
+  function nearest(px, py) {
+    return pts.findIndex(p => { const [x, y] = toPx(p[0], p[1]); return Math.hypot(x - px, y - py) < 16 * dpr; });
+  }
+  cv.addEventListener('pointerdown', e => {
+    stopAnim();
+    const [px, py] = pick(e);
+    const i = nearest(px, py);
+    if (e.button === 2) { if (i >= 0) { pts.splice(i, 1); update(); } return; }
+    if (i >= 0) { drag = i; }
+    else {
+      const [x, y] = toWorld(px, py);
+      if (Math.abs(x) > HALF - 0.3 || Math.abs(y) > HALF - 0.3) return;
+      pts.push([round(x), round(y)]); drag = pts.length - 1; update();
+    }
+    cv.setPointerCapture(e.pointerId);
+  });
+  cv.addEventListener('pointermove', e => {
+    if (drag < 0) return;
+    const [x, y] = toWorld(...pick(e));
+    pts[drag] = [round(Math.max(-HALF + .3, Math.min(HALF - .3, x))), round(Math.max(-HALF + .3, Math.min(HALF - .3, y)))];
+    update();
+  });
+  cv.addEventListener('pointerup', () => { drag = -1; });
+  cv.addEventListener('contextmenu', e => e.preventDefault());
+
+  function stopAnim() { if (anim) { cancelAnimationFrame(anim); anim = null; $('#wpPlay').textContent = '▶ Preview walk'; draw(); } }
+  $('#wpPlay').addEventListener('click', () => {
+    if (anim) return stopAnim();
+    if (!pts.length) return;
+    // simple kinematic preview at 10x speed: same turn-then-walk rule as the node
+    let x = 2.5, y = 0, yaw = Math.PI, idx = 0, wait = 0, last = performance.now();
+    const spd = +$('#spd').value, loop = $('#loop').checked;
+    $('#wpPlay').textContent = '■ Stop';
+    const step = now => {
+      let dt = Math.min(0.05, (now - last) / 1000) * 10; last = now;
+      if (wait > 0) wait -= dt;
+      else {
+        const [gx, gy] = pts[idx];
+        const d = Math.hypot(gx - x, gy - y);
+        if (d < 0.2) {
+          idx++; wait = 1.0;
+          if (idx >= pts.length) { if (!loop) { draw([x, y]); return stopAnim(); } idx = 0; }
+        } else {
+          const err = Math.atan2(Math.sin(Math.atan2(gy - y, gx - x) - yaw), Math.cos(Math.atan2(gy - y, gx - x) - yaw));
+          yaw += Math.max(-1, Math.min(1, 2 * err)) * dt;
+          const v = Math.abs(err) < Math.PI / 3 ? spd * Math.cos(err) : 0;
+          x += v * Math.cos(yaw) * dt; y += v * Math.sin(yaw) * dt;
+        }
+      }
+      draw([x, y]);
+      anim = requestAnimationFrame(step);
+    };
+    anim = requestAnimationFrame(step);
+  });
+  $('#wpSquare').addEventListener('click', () => { stopAnim(); pts = [[3, 3], [-3, 3], [-3, -3], [3, -3]]; update(); });
+  $('#wpClear').addEventListener('click', () => { stopAnim(); pts = []; update(); });
+  $('#spd').addEventListener('input', update);
+  $('#loop').addEventListener('change', update);
+  (() => {   // the planner's <pre> was skipped by the generic copy-button pass above
+    const pre = $('#yamlOut').parentElement;
+    const wrap = document.createElement('div'); wrap.className = 'code';
+    pre.replaceWith(wrap); wrap.append(pre);
+    addCopy(wrap, () => $('#yamlOut').textContent);
+  })();
+  new MutationObserver(() => draw()).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => draw());
+  window.addEventListener('resize', size);
+  pts = [[3, 3], [-3, 3], [-3, -3], [3, -3]];
+  size(); update();
+})();
+</script>
+</body>
+</html>
