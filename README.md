@@ -16,6 +16,7 @@ cd CS485-Project
 ```bash
 ./scripts/launch_sim.sh                     # box_room world + TurtleBot 4 + RViz
 ./scripts/launch_sim.sh world:=warehouse    # stock TB4 worlds: warehouse, maze, depot
+./scripts/launch_sim.sh world:=person_world # open floor + one person to follow
 ./scripts/launch_sim.sh rviz:=false x:=1.0 y:=-2.0
 ./scripts/launch_teleop.sh                  # keyboard driving, in a second terminal
 ./scripts/launch_slam.sh                    # build a map, then ./scripts/save_map.sh <world>
@@ -45,6 +46,7 @@ All scripts are in `scripts/` and can be run from anywhere. Arguments in `[brack
 |---|---|
 | `launch_sim.sh [args]` | Gazebo + TurtleBot 4 + RViz. Takes `world:=`, `rviz:=`, `x:=`/`y:=`/`yaw:=`, `slam:=`, `localization:=`, `nav2:=`, `map:=`. |
 | `launch_teleop.sh` | Drive the robot with the keyboard (run in its own terminal and keep it focused). |
+| `launch_human_teleop.sh` | Drive the person in `person_world` with the keyboard (same keys as `launch_teleop.sh`, run in its own terminal). |
 | `list_worlds.sh` | Lists every world you can launch, whether it has a saved map, and which ones download models on first run. |
 | `kill_sim.sh` | Stops all leftover Gazebo, bridge, RViz, Nav2 and node processes. Run when Ctrl+C left something behind and the next launch misbehaves. Also stops any other ROS 2 nodes on the machine. |
 
@@ -82,6 +84,7 @@ Run `source scripts/env.sh` in a terminal to use `ros2` commands by hand.
 src/people_follower/          ament_python package (our code)
   launch/sim.launch.py        Gazebo + TB4 spawn + RViz
   worlds/box_room.sdf         empty 10 m x 10 m walled room (M1)
+  worlds/person_world.sdf     open floor + one person (VelocityControl on /model/human/cmd_vel)
   maps/                       saved SLAM maps (<world>.yaml + .pgm)
   people_follower/            Python nodes go here; register them in setup.py
   config/                     parameter files

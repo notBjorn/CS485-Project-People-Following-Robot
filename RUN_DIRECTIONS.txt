@@ -65,6 +65,8 @@ Automated navigation (no clicking):
 OPTIONS FOR launch_sim.sh
 -------------------------
   world:=box_room      empty 10 m x 10 m room (default)
+  world:=person_world  open floor + one person; drive the person with
+                       ./scripts/launch_human_teleop.sh in another terminal
   world:=warehouse     TurtleBot 4 stock worlds: warehouse, maze, depot
   rviz:=false          skip RViz
   x:=1.0 y:=-2.0 yaw:=1.57    starting pose of the robot
