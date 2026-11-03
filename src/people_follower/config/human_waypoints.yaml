@@ -1,0 +1,13 @@
+# Parameters for human_waypoints (scripts/launch_human_waypoints.sh).
+# Edit and run ./scripts/build.sh, or pass params_file:=/path/to/your.yaml.
+human_waypoints:
+  ros__parameters:
+    # x, y pairs in the world frame (metres), visited in order. The robot spawns
+    # at (0, 0) facing +x; the walls are at +/-12.5 m. Default: a 6 m square
+    # around the robot.
+    waypoints: [3.0, 3.0, -3.0, 3.0, -3.0, -3.0, 3.0, -3.0]
+    speed: 0.3          # m/s; the TurtleBot 4's top speed is about 0.31 m/s
+    max_turn_rate: 1.0  # rad/s
+    tolerance: 0.2      # m; how close counts as reaching a waypoint
+    loop: true          # start over after the last waypoint
+    pause: 1.0          # s to stand still at each waypoint

@@ -7,5 +7,6 @@ source "$(dirname "$0")/env.sh"
 "$(ros2 pkg prefix ros_gz_bridge)/lib/ros_gz_bridge/parameter_bridge" \
     '/model/human/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist' > /dev/null 2>&1 &
 BRIDGE_PID=$!
-trap 'kill $BRIDGE_PID 2>/dev/null' EXIT
+# Gazebo's VelocityControl keeps the last command, so stop the person on exit
+trap 'kill $BRIDGE_PID 2>/dev/null; gz topic -t /model/human/cmd_vel -m gz.msgs.Twist -p "linear: {x: 0}" 2>/dev/null' EXIT
 ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/model/human/cmd_vel

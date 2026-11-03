@@ -1,7 +1,9 @@
 <?xml version="1.0"?>
 <!-- 25 m x 25 m walled square with one person, for first person-following tests.
      The person is driven by VelocityControl: send geometry_msgs/Twist to
-     /model/human/cmd_vel (scripts/launch_human_teleop.sh does this from the keyboard).
+     /model/human/cmd_vel (launch_human_teleop.sh does this from the keyboard,
+     launch_human_waypoints.sh walks it through waypoints). OdometryPublisher
+     reports its true world pose on /model/human/odometry.
      Physics/plugins/lighting are the same as box_room.sdf. -->
 <sdf version='1.8'>
     <world name='person_world'>
@@ -69,16 +71,16 @@
             </link>
         </model>
 
-        <!-- 2.5 m in front of the robot's default spawn (x=0, y=0, facing +x).
-             The mesh faces +y at yaw 0, so yaw 90 deg turns it to face the robot. -->
+        <!-- 2.5 m in front of the robot's default spawn (x=0, y=0, facing +x),
+             turned to face the robot. The model's +x axis is the person's forward. -->
         <model name='human'>
-            <pose>2.5 0 0 0 0 1.5708</pose>
+            <pose>2.5 0 0 0 0 3.14159</pose>
             <link name='link'>
                 <!-- No gravity: VelocityControl only commands planar motion, so the
                      person stays upright and can't fall over when the robot bumps it -->
                 <gravity>false</gravity>
                 <inertial>
-                    <pose>0 -0.1 0.95 0 0 0</pose>
+                    <pose>0.1 0 0.95 0 0 0</pose>
                     <mass>80.0</mass>
                     <inertia>
                         <ixx>24.88</ixx><ixy>0</ixy><ixz>0</ixz>
@@ -92,9 +94,10 @@
                     <pose>0 0 0.91 0 0 0</pose>
                     <geometry><cylinder><radius>0.25</radius><length>1.8</length></cylinder></geometry>
                 </collision>
-                <!-- Mesh from Fuel model OpenRobotics/Standing person (cached in ~/.gz/fuel) -->
+                <!-- Mesh from Fuel model OpenRobotics/Standing person (cached in ~/.gz/fuel).
+                     The mesh faces -y, so yaw 90 deg turns it to face the model's +x. -->
                 <visual name='visual'>
-                    <pose>0 0 0.02 0.04 0 0</pose>
+                    <pose>0 0 0.02 0.04 0 1.5708</pose>
                     <geometry>
                         <mesh>
                             <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/standing person/3/files/meshes/standing.dae</uri>
@@ -103,6 +106,11 @@
                 </visual>
             </link>
             <plugin name="gz::sim::systems::VelocityControl" filename="gz-sim-velocity-control-system" />
+            <plugin name="gz::sim::systems::OdometryPublisher" filename="gz-sim-odometry-publisher-system">
+                <odom_frame>world</odom_frame>
+                <robot_base_frame>human</robot_base_frame>
+                <odom_publish_frequency>20</odom_publish_frequency>
+            </plugin>
         </model>
     </world>
 </sdf>
