@@ -95,14 +95,23 @@ def generate_launch_description():
             os.path.join(get_package_share_directory('irobot_create_gz_plugins'), 'lib'),
         ]))
 
+    # Server and GUI are started separately: started together, the server waits for the GUI
+    # to send it the world's name, and about 1 launch in 13 that message was lost and it
+    # waited forever.
     # The Create 3 model asks for the classic ogre engine, whose gpu_lidar reported only
-    # its minimum range on hardware GPUs in our testing. Force ogre2 for the sensors.
-    gazebo = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(
-            get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')),
+    # its minimum range on hardware GPUs in our testing. Force ogre2 for the server's sensors.
+    gz_sim_launch = PythonLaunchDescriptionSource(os.path.join(
+        get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py'))
+    gazebo_server = IncludeLaunchDescription(
+        gz_sim_launch,
         launch_arguments=[('gz_args', [
-            LaunchConfiguration('world'), '.sdf', ' -r', ' -v 4',
-            ' --render-engine-server ogre2', ' --gui-config ',
+            LaunchConfiguration('world'), '.sdf', ' -s', ' -r', ' -v 4',
+            ' --render-engine-server ogre2',
+        ])])
+    gazebo_gui = IncludeLaunchDescription(
+        gz_sim_launch,
+        launch_arguments=[('gz_args', [
+            '-g', ' -v 4', ' --gui-config ',
             PathJoinSubstitution([pkg_tb4_gz_bringup, 'gui',
                                   LaunchConfiguration('model'), 'gui.config']),
         ])])
@@ -114,7 +123,8 @@ def generate_launch_description():
     ld = LaunchDescription(ARGUMENTS)
     ld.add_action(gz_resource_path)
     ld.add_action(gz_gui_plugin_path)
-    ld.add_action(gazebo)
+    ld.add_action(gazebo_server)
+    ld.add_action(gazebo_gui)
     ld.add_action(clock_bridge)
     ld.add_action(OpaqueFunction(function=find_map))
     return ld

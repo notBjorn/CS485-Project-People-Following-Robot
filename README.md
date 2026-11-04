@@ -47,7 +47,8 @@ All scripts are in `scripts/` and can be run from anywhere. Arguments in `[brack
 | `launch_sim.sh [args]` | Gazebo + TurtleBot 4 + RViz. Takes `world:=`, `rviz:=`, `x:=`/`y:=`/`yaw:=`, `slam:=`, `localization:=`, `nav2:=`, `map:=`. |
 | `launch_teleop.sh` | Drive the robot with the keyboard (run in its own terminal and keep it focused). |
 | `list_worlds.sh` | Lists every world you can launch, whether it has a saved map, and which ones download models on first run. |
-| `kill_sim.sh` | Stops all leftover Gazebo, bridge, RViz, Nav2 and node processes. Run when Ctrl+C left something behind and the next launch misbehaves. Also stops any other ROS 2 nodes on the machine. |
+| `kill_sim.sh` | Stops all leftover Gazebo, bridge, RViz, Nav2 and node processes, and hung `ros2` commands, then runs `clean_dds.sh`. Run when Ctrl+C left something behind and the next launch misbehaves. Also stops any other ROS 2 nodes on the machine. |
+| `clean_dds.sh` | Removes Fast DDS files in `/dev/shm` that no running process has open. A locked one left by a killed node hangs every later launch. The launch scripts run this for you. |
 
 ### Mapping
 
@@ -61,8 +62,8 @@ All scripts are in `scripts/` and can be run from anywhere. Arguments in `[brack
 
 | Script | What it does |
 |---|---|
-| `nav_demo.sh [sim args] [-- node args]` | Automated navigation in one command: starts the sim with localization and Nav2, waits until Nav2 is active, then runs `nav_automation_node`. Ctrl+C stops everything. Launch output goes to `log/nav_demo_launch.log`. Example: `./scripts/nav_demo.sh world:=warehouse -- -p goal_x:=3.0 -p goal_y:=-2.0` |
-| `launch_nav.sh [args]` | Simulation with AMCL localization and Nav2 on the world's saved map. |
+| `nav_demo.sh [sim args] [-- node args]` | Automated navigation in one command: starts the sim with localization and Nav2, waits until AMCL is active, then runs `nav_automation_node`, which sets the initial pose and waits for Nav2. Ctrl+C stops everything. Launch output goes to `log/nav_demo_launch.log`. Example: `./scripts/nav_demo.sh world:=warehouse -- -p goal_x:=3.0 -p goal_y:=-2.0` |
+| `launch_nav.sh [args]` | Simulation with AMCL localization and Nav2 on the world's saved map. Sets the initial pose to the spawn pose (`x:=`, `y:=`, `yaw:=`, default `0 0 0`). |
 | `launch_nav_node.sh [-p param:=value ...]` | Runs `nav_automation_node` against an already-running `launch_nav.sh`. Parameters: `initial_x`, `initial_y`, `initial_direction`, `goal_x`, `goal_y`, `update_period`, `resend_distance`. |
 | `set_initial_pose.sh [x] [y] [direction]` | Tells AMCL where the robot is, like RViz's "2D Pose Estimate". Defaults to `0 0 0` (the default spawn). Direction is in degrees; 0 faces +x. |
 | `send_goal.sh <x> <y> [direction]` | Sends one Nav2 goal from the terminal and prints progress. Useful for checking Nav2 works on its own before testing the node. |
@@ -101,4 +102,4 @@ scripts/                      helper scripts (see Scripts above)
 | `/cmd_vel` | geometry_msgs/TwistStamped | drive the robot (stamped) |
 | `/odom` | nav_msgs/Odometry | |
 
-`ROS_DOMAIN_ID` defaults to 30 and discovery is localhost-only (see `scripts/env.sh`).
+`ROS_DOMAIN_ID` defaults to 30 and discovery uses the ROS default, which reaches your local network (see `scripts/env.sh`). Nav2 doesn't start with localhost-only discovery. On a shared network, give each person their own ID: `export ROS_DOMAIN_ID=<0-101>`.

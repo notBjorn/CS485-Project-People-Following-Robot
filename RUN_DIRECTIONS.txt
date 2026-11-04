@@ -24,15 +24,24 @@ Terminal 1 - Gazebo + TurtleBot 4 + RViz:
      ./scripts/launch_sim.sh
 
    Startup takes a while. Wait until the robot appears in Gazebo and RViz
-   opens before moving on.
+   opens before moving on. If startup stalls, the script says so and relaunches
+   by itself (up to 3 tries).
 
-Terminal 2 - drive the robot with the keyboard:
+Terminal 2 - undock, then drive the robot with the keyboard:
 
+     source scripts/env.sh
+     ros2 action send_goal /undock irobot_create_msgs/action/Undock "{}"
      ./scripts/launch_teleop.sh
+
+   The robot starts docked and facing the dock. Driving forward without undocking
+   pushes it into the dock, and its bumper safety reflex then ignores your commands.
+   It still faces the dock after undocking, so turn around before driving forward.
 
    Keep this terminal focused while pressing keys:
      i = forward    , = backward    j / l = turn left / right
      k = stop       q / z = faster / slower
+     w / x = forward speed only     e / c = turn speed only
+   The robot's speed is capped at about 0.31 m/s, whatever teleop shows.
 
 
 MAPPING AND NAVIGATION
@@ -43,15 +52,26 @@ simple_colored_warehouse each need one made once.
 
 Making a map (SLAM):
   Terminal 1:   ./scripts/launch_slam.sh                (add world:=... for other worlds)
-  Terminal 2:   ./scripts/launch_teleop.sh              drive around until the map in RViz is complete
+  Terminal 2:   undock (see RUNNING THE SIMULATION), then
+                ./scripts/launch_teleop.sh              drive around until the map in RViz is complete
+                Press c about 10 times first to slow the turns: fast turns rotate
+                the whole map (about 7 degrees in one test).
   Terminal 3:   ./scripts/save_map.sh box_room          name it after the world
+                ("Failed to spin map subscription" is fine: it tries up to 3 times.)
   Then stop everything (Ctrl+C) and run:  ./scripts/build.sh
   The map is saved in src/people_follower/maps/ - commit it so the team has it.
 
 Navigating on the map:
   Terminal 1:   ./scripts/launch_nav.sh                 (add world:=warehouse etc.)
-  In RViz:      "2D Pose Estimate" = tell the robot where it is
-                "Nav2 Goal"        = click a spot to send the robot there
+                This also sets the robot's starting pose on the map for you, using
+                x:=, y:= and yaw:= if you pass them. Wait for "Initial pose set".
+  Terminal 2:   undock (see RUNNING THE SIMULATION)
+  In RViz:      "Nav2 Goal"        = click a spot to send the robot there
+                "2D Pose Estimate" = correct the robot's position, if it's wrong
+  Or send a goal without RViz:  ./scripts/send_goal.sh -2.0 2.0
+  Nav2 can't see the dock (it's below the lidar) and will drive into it if the dock
+  is on the way to your goal. Pick a first goal away from it. nav_automation_node
+  and nav_demo.sh go around it by themselves.
 
 Automated navigation (no clicking):
   Terminal 1:   ./scripts/launch_nav.sh
@@ -118,6 +138,17 @@ TROUBLESHOOTING
     pass map:=/path/to/map.yaml.
   - The robot doesn't move in Nav2 / RViz shows no map: set "2D Pose Estimate"
     in RViz, or check the node's initial_x / initial_y match where it spawned.
+    Nav2 gives up if no pose is set within about a minute of launching; launch
+    again if so (launch_nav.sh and nav_demo.sh set the pose for you).
+  - The robot won't drive forward and the log says "Ignoring velocities": it's
+    pushing into its dock. Undock first (see RUNNING THE SIMULATION).
+  - "Simulation startup stalled": the script relaunches by itself. This stops other
+    ROS nodes on the machine, including teleop, so restart those afterwards.
+  - Launches hang with "No clock received" or "Requesting list of world names", or
+    ros2 commands hang: a killed node can leave a locked file in /dev/shm that blocks
+    every later launch, and "fastdds shm clean" won't remove it.
+    The launch scripts clear these for you. If you started ros2 launch by hand, run
+    ./scripts/kill_sim.sh first.
   - No topics show up: make sure every terminal uses the scripts (or runs
     "source scripts/env.sh") so they share ROS_DOMAIN_ID=30.
   - Everything is slow / camera updates rarely: the simulation is limited
