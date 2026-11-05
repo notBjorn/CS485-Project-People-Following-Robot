@@ -38,7 +38,8 @@ Terminal 2 - drive the robot with the keyboard:
 MAPPING AND NAVIGATION
 ----------------------
 Navigation needs a saved map of the world. warehouse, maze and depot already
-have maps (installed with the TurtleBot 4 packages); box_room needs one made once.
+have maps (installed with the TurtleBot 4 packages); box_room and
+simple_colored_warehouse each need one made once.
 
 Making a map (SLAM):
   Terminal 1:   ./scripts/launch_slam.sh                (add world:=... for other worlds)
@@ -65,6 +66,7 @@ Automated navigation (no clicking):
 OPTIONS FOR launch_sim.sh
 -------------------------
   world:=box_room      empty 10 m x 10 m room (default)
+  world:=simple_colored_warehouse    30 m x 24 m warehouse with colored boxes
   world:=warehouse     TurtleBot 4 stock worlds: warehouse, maze, depot
   rviz:=false          skip RViz
   x:=1.0 y:=-2.0 yaw:=1.57    starting pose of the robot

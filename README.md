@@ -16,6 +16,7 @@ cd CS485-Project
 ```bash
 ./scripts/launch_sim.sh                     # box_room world + TurtleBot 4 + RViz
 ./scripts/launch_sim.sh world:=warehouse    # stock TB4 worlds: warehouse, maze, depot
+./scripts/launch_sim.sh world:=simple_colored_warehouse   # 30 m x 24 m warehouse with colored boxes
 ./scripts/launch_sim.sh rviz:=false x:=1.0 y:=-2.0
 ./scripts/launch_teleop.sh                  # keyboard driving, in a second terminal
 ./scripts/launch_slam.sh                    # build a map, then ./scripts/save_map.sh <world>
@@ -82,6 +83,7 @@ Run `source scripts/env.sh` in a terminal to use `ros2` commands by hand.
 src/people_follower/          ament_python package (our code)
   launch/sim.launch.py        Gazebo + TB4 spawn + RViz
   worlds/box_room.sdf         empty 10 m x 10 m walled room (M1)
+  worlds/simple_colored_warehouse.sdf   30 m x 24 m warehouse, by Arshal on Gazebo Fuel (CC BY 4.0)
   maps/                       saved SLAM maps (<world>.yaml + .pgm)
   people_follower/            Python nodes go here; register them in setup.py
   config/                     parameter files
