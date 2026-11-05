@@ -55,3 +55,6 @@ CATKIN_IGNORE
 install/
 log/
 __pycache__/
+
+# Recorded test runs (scripts/record_bag.sh)
+bags/

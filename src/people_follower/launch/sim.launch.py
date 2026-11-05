@@ -7,6 +7,11 @@ name, since the TB4 bridges build '/world/<world>/...' topics from it.
 
     ros2 launch people_follower sim.launch.py                    # box_room
     ros2 launch people_follower sim.launch.py world:=warehouse   # TB4 worlds: warehouse, maze, depot
+    ros2 launch people_follower sim.launch.py slam:=true          # build a map
+    ros2 launch people_follower sim.launch.py localization:=true nav2:=true   # navigate on a map
+
+With localization:=true the map defaults to <world>.yaml, looked up first in
+people_follower/maps, then in turtlebot4_navigation/maps. Override with map:=/path/to/map.yaml.
 """
 
 import os
@@ -14,7 +19,8 @@ from pathlib import Path
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable
+from launch.actions import (DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction,
+                            SetEnvironmentVariable)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -26,10 +32,43 @@ ARGUMENTS = [
                           choices=['true', 'false'], description='Start RViz'),
     DeclareLaunchArgument('model', default_value='standard',
                           choices=['standard', 'lite'], description='TurtleBot 4 model'),
+    DeclareLaunchArgument('slam', default_value='false',
+                          choices=['true', 'false'], description='Run SLAM to build a map'),
+    DeclareLaunchArgument('localization', default_value='false',
+                          choices=['true', 'false'], description='Run AMCL on a saved map'),
+    DeclareLaunchArgument('nav2', default_value='false',
+                          choices=['true', 'false'], description='Run Nav2'),
+    DeclareLaunchArgument('map', default_value='',
+                          description='Map yaml for localization (default: <world>.yaml)'),
 ]
 for pose_element in ['x', 'y', 'z', 'yaw']:
     ARGUMENTS.append(DeclareLaunchArgument(pose_element, default_value='0.0',
                      description=f'{pose_element} component of the robot pose'))
+
+
+def find_map(context):
+    """Resolve map:= to <world>.yaml when not given, so the spawn launch's localization uses it."""
+    map_yaml = LaunchConfiguration('map').perform(context)
+    if not map_yaml:
+        world = LaunchConfiguration('world').perform(context)
+        for pkg in ['people_follower', 'turtlebot4_navigation']:
+            candidate = os.path.join(get_package_share_directory(pkg), 'maps', world + '.yaml')
+            if os.path.isfile(candidate):
+                map_yaml = candidate
+                break
+    if not map_yaml and LaunchConfiguration('localization').perform(context) == 'true':
+        raise RuntimeError(
+            'No map found for this world. Build one with slam:=true and scripts/save_map.sh, '
+            'or pass map:=/path/to/map.yaml')
+
+    robot_spawn = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(
+            get_package_share_directory('turtlebot4_gz_bringup'),
+            'launch', 'turtlebot4_spawn.launch.py')),
+        launch_arguments=[(name, LaunchConfiguration(name)) for name in
+                          ['world', 'rviz', 'model', 'x', 'y', 'z', 'yaw',
+                           'slam', 'localization', 'nav2']] + [('map', map_yaml)])
+    return [robot_spawn]
 
 
 def generate_launch_description():
@@ -69,16 +108,10 @@ def generate_launch_description():
         package='ros_gz_bridge', executable='parameter_bridge', name='clock_bridge',
         output='screen', arguments=['/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'])
 
-    robot_spawn = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(
-            pkg_tb4_gz_bringup, 'launch', 'turtlebot4_spawn.launch.py')),
-        launch_arguments=[(name, LaunchConfiguration(name)) for name in
-                          ['world', 'rviz', 'model', 'x', 'y', 'z', 'yaw']])
-
     ld = LaunchDescription(ARGUMENTS)
     ld.add_action(gz_resource_path)
     ld.add_action(gz_gui_plugin_path)
     ld.add_action(gazebo)
     ld.add_action(clock_bridge)
-    ld.add_action(robot_spawn)
+    ld.add_action(OpaqueFunction(function=find_map))
     return ld
