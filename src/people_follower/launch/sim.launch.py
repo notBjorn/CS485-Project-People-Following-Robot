@@ -95,11 +95,14 @@ def generate_launch_description():
             os.path.join(get_package_share_directory('irobot_create_gz_plugins'), 'lib'),
         ]))
 
+    # The Create 3 model asks for the classic ogre engine, whose gpu_lidar reported only
+    # its minimum range on hardware GPUs in our testing. Force ogre2 for the sensors.
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
             get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')),
         launch_arguments=[('gz_args', [
-            LaunchConfiguration('world'), '.sdf', ' -r', ' -v 4', ' --gui-config ',
+            LaunchConfiguration('world'), '.sdf', ' -r', ' -v 4',
+            ' --render-engine-server ogre2', ' --gui-config ',
             PathJoinSubstitution([pkg_tb4_gz_bringup, 'gui',
                                   LaunchConfiguration('model'), 'gui.config']),
         ])])
