@@ -65,6 +65,12 @@ Automated navigation (no clicking):
 OPTIONS FOR launch_sim.sh
 -------------------------
   world:=box_room      empty 10 m x 10 m room (default)
+  world:=person_world  25 m x 25 m walled square + one person. Move the person from
+                       another terminal, either by keyboard:
+                         ./scripts/launch_human_teleop.sh
+                       or along the waypoints in src/people_follower/config/human_waypoints.yaml
+                       (edit them, then ./scripts/build.sh):
+                         ./scripts/launch_human_waypoints.sh
   world:=warehouse     TurtleBot 4 stock worlds: warehouse, maze, depot
   rviz:=false          skip RViz
   x:=1.0 y:=-2.0 yaw:=1.57    starting pose of the robot

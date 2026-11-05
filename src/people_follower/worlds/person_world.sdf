@@ -1,0 +1,116 @@
+<?xml version="1.0"?>
+<!-- 25 m x 25 m walled square with one person, for first person-following tests.
+     The person is driven by VelocityControl: send geometry_msgs/Twist to
+     /model/human/cmd_vel (launch_human_teleop.sh does this from the keyboard,
+     launch_human_waypoints.sh walks it through waypoints). OdometryPublisher
+     reports its true world pose on /model/human/odometry.
+     Physics/plugins/lighting are the same as box_room.sdf. -->
+<sdf version='1.8'>
+    <world name='person_world'>
+        <physics name='1ms' type='ignored'>
+            <max_step_size>0.003</max_step_size>
+            <real_time_factor>1</real_time_factor>
+            <real_time_update_rate>1000</real_time_update_rate>
+        </physics>
+
+        <plugin name="gz::sim::systems::Physics" filename="gz-sim-physics-system" />
+        <plugin name="gz::sim::systems::UserCommands" filename="gz-sim-user-commands-system" />
+        <plugin name="gz::sim::systems::SceneBroadcaster" filename="gz-sim-scene-broadcaster-system" />
+        <plugin name="gz::sim::systems::Contact" filename="gz-sim-contact-system" />
+
+        <light name='sun' type='directional'>
+            <cast_shadows>1</cast_shadows>
+            <pose>0 0 10 0 0 0</pose>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <direction>-0.5 0.1 -0.9</direction>
+        </light>
+        <gravity>0 0 -9.8</gravity>
+        <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
+        <atmosphere type='adiabatic' />
+        <scene>
+            <ambient>0.4 0.4 0.4 1</ambient>
+            <background>0.7 0.7 0.7 1</background>
+            <shadows>1</shadows>
+        </scene>
+
+        <model name='ground_plane'>
+            <static>true</static>
+            <link name='link'>
+                <collision name='collision'>
+                    <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+                </collision>
+                <visual name='visual'>
+                    <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+                    <material>
+                        <ambient>0.8 0.8 0.8 1</ambient>
+                        <diffuse>0.8 0.8 0.8 1</diffuse>
+                        <specular>0.8 0.8 0.8 1</specular>
+                    </material>
+                </visual>
+            </link>
+        </model>
+
+        <!-- 25 m x 25 m square of 1 m walls centred on the spawn (inner faces at +/-12.5 m).
+             Note: the RPLIDAR range is 12 m, so from the centre the walls are just out of range. -->
+        <model name='walls'>
+            <static>true</static>
+            <link name='link'>
+                <collision name='north_collision'><pose>0 12.6 0.5 0 0 0</pose><geometry><box><size>25.4 0.2 1.0</size></box></geometry></collision>
+                <visual name='north_visual'><pose>0 12.6 0.5 0 0 0</pose><geometry><box><size>25.4 0.2 1.0</size></box></geometry>
+                    <material><ambient>0.6 0.6 0.65 1</ambient><diffuse>0.6 0.6 0.65 1</diffuse></material></visual>
+                <collision name='south_collision'><pose>0 -12.6 0.5 0 0 0</pose><geometry><box><size>25.4 0.2 1.0</size></box></geometry></collision>
+                <visual name='south_visual'><pose>0 -12.6 0.5 0 0 0</pose><geometry><box><size>25.4 0.2 1.0</size></box></geometry>
+                    <material><ambient>0.6 0.6 0.65 1</ambient><diffuse>0.6 0.6 0.65 1</diffuse></material></visual>
+                <collision name='east_collision'><pose>12.6 0 0.5 0 0 0</pose><geometry><box><size>0.2 25.4 1.0</size></box></geometry></collision>
+                <visual name='east_visual'><pose>12.6 0 0.5 0 0 0</pose><geometry><box><size>0.2 25.4 1.0</size></box></geometry>
+                    <material><ambient>0.6 0.6 0.65 1</ambient><diffuse>0.6 0.6 0.65 1</diffuse></material></visual>
+                <collision name='west_collision'><pose>-12.6 0 0.5 0 0 0</pose><geometry><box><size>0.2 25.4 1.0</size></box></geometry></collision>
+                <visual name='west_visual'><pose>-12.6 0 0.5 0 0 0</pose><geometry><box><size>0.2 25.4 1.0</size></box></geometry>
+                    <material><ambient>0.6 0.6 0.65 1</ambient><diffuse>0.6 0.6 0.65 1</diffuse></material></visual>
+            </link>
+        </model>
+
+        <!-- 2.5 m in front of the robot's default spawn (x=0, y=0, facing +x),
+             turned to face the robot. The model's +x axis is the person's forward. -->
+        <model name='human'>
+            <pose>2.5 0 0 0 0 3.14159</pose>
+            <link name='link'>
+                <!-- No gravity: VelocityControl only commands planar motion, so the
+                     person stays upright and can't fall over when the robot bumps it -->
+                <gravity>false</gravity>
+                <inertial>
+                    <pose>0.1 0 0.95 0 0 0</pose>
+                    <mass>80.0</mass>
+                    <inertia>
+                        <ixx>24.88</ixx><ixy>0</ixy><ixz>0</ixz>
+                        <iyy>25.73</iyy><iyz>0</iyz>
+                        <izz>2.48</izz>
+                    </inertia>
+                </inertial>
+                <!-- dartsim can't build mesh collisions, so collide as a cylinder
+                     (lifted 1 cm off the floor so it slides without friction) -->
+                <collision name='body'>
+                    <pose>0 0 0.91 0 0 0</pose>
+                    <geometry><cylinder><radius>0.25</radius><length>1.8</length></cylinder></geometry>
+                </collision>
+                <!-- Mesh from Fuel model OpenRobotics/Standing person (cached in ~/.gz/fuel).
+                     The mesh faces -y, so yaw 90 deg turns it to face the model's +x. -->
+                <visual name='visual'>
+                    <pose>0 0 0.02 0.04 0 1.5708</pose>
+                    <geometry>
+                        <mesh>
+                            <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/standing person/3/files/meshes/standing.dae</uri>
+                        </mesh>
+                    </geometry>
+                </visual>
+            </link>
+            <plugin name="gz::sim::systems::VelocityControl" filename="gz-sim-velocity-control-system" />
+            <plugin name="gz::sim::systems::OdometryPublisher" filename="gz-sim-odometry-publisher-system">
+                <odom_frame>world</odom_frame>
+                <robot_base_frame>human</robot_base_frame>
+                <odom_publish_frequency>20</odom_publish_frequency>
+            </plugin>
+        </model>
+    </world>
+</sdf>
