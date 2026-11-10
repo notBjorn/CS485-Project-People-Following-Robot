@@ -1,0 +1,56 @@
+# Shared steps for demo_uwb_follow.sh and demo_uwb_two_people.sh (sourced, not run).
+# Everything a demo starts is stopped when it exits (Ctrl+C, or a failed step).
+source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/sim_start.sh"
+SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG="$(ros2 pkg prefix people_follower)/share/people_follower/config"
+DEMO_PIDS=()
+
+# demo_setup <name>: log folder log/<name>/, and clean-up on exit.
+demo_setup() {
+    LOGS="$PROJECT_ROOT/log/$1"
+    mkdir -p "$LOGS"
+    trap demo_cleanup EXIT
+    trap 'exit 0' INT TERM
+}
+
+demo_cleanup() {
+    echo
+    echo "Stopping the demo..."
+    for pid in "${DEMO_PIDS[@]}"; do kill -INT "$pid" 2>/dev/null; done
+    sleep 2
+    stop_sim >/dev/null 2>&1
+    "$SCRIPTS/kill_sim.sh" >/dev/null 2>&1
+    echo "Stopped. Logs: $LOGS"
+}
+
+# demo_start_sim: the warehouse (UWB plugin, person wearing tag 1, robot carrying
+# anchors 1-4), robot at the origin facing away from the dock so it never drives over it.
+demo_start_sim() {
+    echo "Starting Gazebo with the warehouse (log: $LOGS/sim.log)..."
+    start_sim "$LOGS/sim.log" world:=simple_colored_warehouse rviz:=false yaw:=3.14159 || exit 1
+}
+
+# demo_start_follower: undock, then uwb_localizer + uwb_follower. Waits until the
+# localizer has calibrated the anchors (the person must stand still until then).
+demo_start_follower() {
+    echo "Undocking and starting the UWB follower..."
+    "$SCRIPTS/launch_follow.sh" > "$LOGS/follow.log" 2>&1 &
+    DEMO_PIDS+=($!)
+    for _ in $(seq 1 120); do grep -q 'Calibrated' "$LOGS/follow.log" && break; sleep 1; done
+    if ! grep -q 'Calibrated' "$LOGS/follow.log"; then
+        echo "The UWB localizer never calibrated; see $LOGS/follow.log" >&2
+        exit 1
+    fi
+    echo "UWB anchors calibrated; the robot is tracking the person's tag."
+}
+
+# demo_watch <log>...: print what the robot is doing until Ctrl+C.
+demo_watch() {
+    echo
+    echo "Demo running. Watch Gazebo; events below. Ctrl+C to stop."
+    echo
+    tail -n 0 -F "$LOGS/follow.log" "$@" 2>/dev/null | sed -u 's/\x1b\[[0-9;]*m//g' \
+        | grep --line-buffered -E '\[(uwb_localizer|uwb_follower|human_waypoints|human2_waypoints)\]|^\[[0-9]+ s\]' \
+        | sed -u -E 's/^\[[a-z0-9_]+-[0-9]+\] \[[A-Z]+\] \[[0-9.]+\] \[([a-z0-9_]+)\]: /  \1: /'
+}
