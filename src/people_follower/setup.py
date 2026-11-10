@@ -34,6 +34,7 @@ setup(
             'person_tracker = people_follower.person_tracker:main',
             'person_follower = people_follower.person_follower:main',
             'safety_guard = people_follower.safety_guard:main',
+            'auto_explorer = people_follower.auto_explorer:main',
         ],
     },
 )
