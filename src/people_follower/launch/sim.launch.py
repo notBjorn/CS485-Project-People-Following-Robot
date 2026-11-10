@@ -61,10 +61,12 @@ def find_map(context):
             'No map found for this world. Build one with slam:=true and scripts/save_map.sh, '
             'or pass map:=/path/to/map.yaml')
 
+    # Our copy of turtlebot4_gz_bringup's turtlebot4_spawn.launch.py: same robot, plus
+    # four UWB anchors on the top plate (urdf/turtlebot4_uwb.urdf.xacro).
     robot_spawn = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
-            get_package_share_directory('turtlebot4_gz_bringup'),
-            'launch', 'turtlebot4_spawn.launch.py')),
+            get_package_share_directory('people_follower'),
+            'launch', 'turtlebot4_uwb_spawn.launch.py')),
         launch_arguments=[(name, LaunchConfiguration(name)) for name in
                           ['world', 'rviz', 'model', 'x', 'y', 'z', 'yaw',
                            'slam', 'localization', 'nav2']] + [('map', map_yaml)])
@@ -120,11 +122,22 @@ def generate_launch_description():
         package='ros_gz_bridge', executable='parameter_bridge', name='clock_bridge',
         output='screen', arguments=['/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'])
 
+    # UWB ranges (src/uwb_gazebo_plugin) from the robot's anchors 1-4 to the person's tag 1,
+    # measured and true, as std_msgs/Float64 in centimetres. Worlds without the UWB plugin
+    # just don't publish them.
+    uwb_topics = [f'/uwb_gz_simulator/{kind}/a{anchor}t1'
+                  for kind in ('distances', 'distances_ground_truth') for anchor in range(1, 5)]
+    uwb_bridge = Node(
+        package='ros_gz_bridge', executable='parameter_bridge', name='uwb_bridge',
+        output='screen',
+        arguments=[f'{topic}@std_msgs/msg/Float64[gz.msgs.Double' for topic in uwb_topics])
+
     ld = LaunchDescription(ARGUMENTS)
     ld.add_action(gz_resource_path)
     ld.add_action(gz_gui_plugin_path)
     ld.add_action(gazebo_server)
     ld.add_action(gazebo_gui)
     ld.add_action(clock_bridge)
+    ld.add_action(uwb_bridge)
     ld.add_action(OpaqueFunction(function=find_map))
     return ld

@@ -13,6 +13,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', glob('launch/*.launch.py')),
         ('share/' + package_name + '/worlds', glob('worlds/*.sdf')),
+        ('share/' + package_name + '/urdf', glob('urdf/*.xacro')),
         ('share/' + package_name + '/config', glob('config/*')),
         ('share/' + package_name + '/maps', glob('maps/*.yaml') + glob('maps/*.pgm')),
     ],
@@ -27,6 +28,8 @@ setup(
         'console_scripts': [
             # 'follower = people_follower.follower:main',
             'human_waypoints = people_follower.human_waypoints:main',
+            'uwb_localizer = people_follower.uwb_localizer:main',
+            'uwb_follower = people_follower.uwb_follower:main',
         ],
     },
 )

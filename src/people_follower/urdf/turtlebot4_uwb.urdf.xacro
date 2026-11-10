@@ -1,0 +1,54 @@
+<?xml version="1.0" ?>
+<!-- TurtleBot 4 with four UWB anchors on its top plate, for the UWB Gazebo plugin
+     (src/uwb_gazebo_plugin). Includes the stock description unchanged, then adds
+     the anchors. Spawned by launch/turtlebot4_uwb_spawn.launch.py.
+
+     The plugin finds anchors by link name (uwb_anchor_<id>). Gazebo merges links
+     on fixed joints into their parent when it converts a URDF, which would remove
+     those names, so each joint has preserveFixedJoint. The anchors also get TF
+     frames (uwb_anchor_<id>) from robot_state_publisher.
+
+     model:=lite has no top plate, so it gets no anchors. -->
+<robot name="turtlebot4" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:arg name="model" default="standard"/>
+  <xacro:include filename="$(find turtlebot4_description)/urdf/$(arg model)/turtlebot4.urdf.xacro"/>
+
+  <!-- Top of the tower sensor plate above base_link: base_link_z_offset (6.42 cm)
+       + shell_z_offset (3 cm) + tower_sensor_plate_z_offset (25.257 cm) + the
+       plate's top face (0.25 cm) = 34.9 cm. The anchors sit 2 cm above it. -->
+  <xacro:property name="uwb_anchor_z" value="0.369"/>
+  <!-- On the plate's corners at 45 degrees, 12 cm from the centre (plate radius
+       13.7 cm): 17 cm apart side to side, 24 cm diagonally. -->
+  <xacro:property name="uwb_anchor_xy" value="0.085"/>
+
+  <xacro:macro name="uwb_anchor" params="id x y">
+    <joint name="uwb_anchor_${id}_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="uwb_anchor_${id}"/>
+      <origin xyz="${x} ${y} ${uwb_anchor_z}" rpy="0 0 0"/>
+    </joint>
+    <!-- Visual only: no collision, so it changes nothing about how the robot
+         drives or what its sensors see. -->
+    <link name="uwb_anchor_${id}">
+      <visual>
+        <geometry><box size="0.025 0.04 0.012"/></geometry>
+        <material name="uwb_anchor_white"><color rgba="0.92 0.92 0.92 1"/></material>
+      </visual>
+      <inertial>
+        <mass value="0.01"/>
+        <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/>
+      </inertial>
+    </link>
+    <gazebo reference="uwb_anchor_${id}_joint">
+      <preserveFixedJoint>true</preserveFixedJoint>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- Numbered anticlockwise from front-left, seen from above (+x is forward). -->
+  <xacro:if value="${'$(arg model)' == 'standard'}">
+    <xacro:uwb_anchor id="1" x="${uwb_anchor_xy}"  y="${uwb_anchor_xy}"/>
+    <xacro:uwb_anchor id="2" x="${-uwb_anchor_xy}" y="${uwb_anchor_xy}"/>
+    <xacro:uwb_anchor id="3" x="${-uwb_anchor_xy}" y="${-uwb_anchor_xy}"/>
+    <xacro:uwb_anchor id="4" x="${uwb_anchor_xy}"  y="${-uwb_anchor_xy}"/>
+  </xacro:if>
+</robot>
