@@ -7,7 +7,11 @@
      - Renamed the world from warehouse_world to match this file's name.
      - Removed the Sensors plugin (the TurtleBot 4 model loads its own) and added Contact.
      - Set the physics step to 3 ms, matching box_room and the TurtleBot 4 worlds.
-     - Replaced the Sun model from Fuel with a built-in light, so no download is needed. -->
+     - Replaced the Sun model from Fuel with a built-in light, so no download is needed.
+     - Renamed the floor model from white_floor to ground_plane: the UWB plugin skips
+       only that exact name when looking for obstacles.
+     - Added the UWB plugin and a person wearing UWB tag 1 (the TurtleBot carries
+       anchors 1-4, see people_follower/urdf/turtlebot4_uwb.urdf.xacro). -->
 <sdf version="1.7">
   <world name="simple_colored_warehouse">
 
@@ -41,6 +45,47 @@
 <plugin filename="gz-sim-contact-system"
         name="gz::sim::systems::Contact"/>
 
+<!-- UWB ranging (src/uwb_gazebo_plugin, from UWBPX4Sim), "lps_twr" preset: Bitcraze
+     Loco Positioning (DWM1000) in two-way ranging mode. Publishes the distance from
+     every anchor I to every tag J on /uwb_gz_simulator/distances/aItJ (gz.msgs.Double,
+     centimetres) and the true distance on /uwb_gz_simulator/distances_ground_truth/aItJ.
+     Tags and anchors are links named uwb_tag_<id> / uwb_anchor_<id>.
+     Regenerate with: python3 src/uwb_gazebo_plugin/preset_to_sdf.py lps_twr -->
+<plugin filename="libUWBGazeboPlugin.so" name="custom::UWBGazeboSystem">
+  <uwb_mode>twr</uwb_mode>
+  <topic>/uwb_gz_simulator/distances</topic>
+  <ground_truth_topic>/uwb_gz_simulator/distances_ground_truth</ground_truth_topic>
+  <tdoa_topic>/uwb_gz_simulator/tdoa</tdoa_topic>
+  <tdoa_ground_truth_topic>/uwb_gz_simulator/tdoa_ground_truth</tdoa_ground_truth_topic>
+  <update_rate_hz>30.0</update_rate_hz>
+  <path_loss_exponent>2.0</path_loss_exponent>
+  <max_link_loss_db>37.5</max_link_loss_db>
+  <noise_start_loss_db>23.5</noise_start_loss_db>
+  <noise_end_loss_db>37.5</noise_end_loss_db>
+  <dropout_center_loss_db>35.5</dropout_center_loss_db>
+  <dropout_width_db>1.4</dropout_width_db>
+  <min_noise_stddev_cm>8.3</min_noise_stddev_cm>
+  <max_noise_stddev_cm>50.0</max_noise_stddev_cm>
+  <min_dropout_probability>0.02</min_dropout_probability>
+  <enable_nlos_dropout>false</enable_nlos_dropout>
+  <nlos_endpoint_margin_m>0.02</nlos_endpoint_margin_m>
+  <nlos_min_loss_db>3.0</nlos_min_loss_db>
+  <body_shadow_max_loss_db>10.0</body_shadow_max_loss_db>
+  <enable_material_attenuation>true</enable_material_attenuation>
+  <carrier_frequency_ghz>4.0</carrier_frequency_ghz>
+  <material_metal_detour_loss_db>20.0</material_metal_detour_loss_db>
+  <enable_dielectric_delay>false</enable_dielectric_delay>
+  <moving_outlier_probability>0.35</moving_outlier_probability>
+  <moving_outlier_mean_cm>14.7</moving_outlier_mean_cm>
+  <moving_outlier_min_speed_mps>0.002</moving_outlier_min_speed_mps>
+  <power_bias_cm_per_db>0.99</power_bias_cm_per_db>
+  <power_bias_ref_loss_db>16.6</power_bias_ref_loss_db>
+  <gaussian_noise_mean_cm>0.0</gaussian_noise_mean_cm>
+  <apply_pair_bias>true</apply_pair_bias>
+  <bias_min_cm>-34.4</bias_min_cm>
+  <bias_max_cm>-10.5</bias_max_cm>
+</plugin>
+
     <!-- Sun -->
     <light name="sun" type="directional">
       <cast_shadows>1</cast_shadows>
@@ -55,8 +100,8 @@
       <shadows>1</shadows>
     </scene>
 
-<!-- White floor -->
-<model name="white_floor">
+<!-- White floor. Named ground_plane: the UWB plugin skips only that exact name. -->
+<model name="ground_plane">
   <static>true</static>
   <pose>0 0 0 0 0 0</pose>
 
@@ -403,6 +448,76 @@
           </material>
         </visual>
       </link>
+    </model>
+
+    <!-- ===================================================== -->
+    <!-- PERSON TO FOLLOW (same model as person_world.sdf)     -->
+    <!-- ===================================================== -->
+
+    <!-- Driven by VelocityControl: send geometry_msgs/Twist to /model/human/cmd_vel
+         (launch_human_teleop.sh). OdometryPublisher reports its true world pose on
+         /model/human/odometry. The robot spawns at the centre crossroads facing +x,
+         with a wall end 2 m ahead, so the person stands 2.9 m away towards the
+         north-east room, turned to face the robot. The model's +x is forward. -->
+    <model name='human'>
+      <pose>2.5 1.5 0 0 0 -2.6012</pose>
+      <!-- Named base_link so the UWB plugin treats the body as the person's own:
+           it then shadows the tag (adds loss) when it is between the tag and an anchor. -->
+      <link name='base_link'>
+        <!-- No gravity: VelocityControl only commands planar motion, so the
+             person stays upright and can't fall over when the robot bumps it -->
+        <gravity>false</gravity>
+        <inertial>
+          <pose>0.1 0 0.95 0 0 0</pose>
+          <mass>80.0</mass>
+          <inertia>
+            <ixx>24.88</ixx><ixy>0</ixy><ixz>0</ixz>
+            <iyy>25.73</iyy><iyz>0</iyz>
+            <izz>2.48</izz>
+          </inertia>
+        </inertial>
+        <!-- dartsim can't build mesh collisions, so collide as a cylinder
+             (lifted 1 cm off the floor so it slides without friction) -->
+        <collision name='body'>
+          <pose>0 0 0.91 0 0 0</pose>
+          <geometry><cylinder><radius>0.25</radius><length>1.8</length></cylinder></geometry>
+        </collision>
+        <!-- Mesh from Fuel model OpenRobotics/Standing person (cached in ~/.gz/fuel).
+             The mesh faces -y, so yaw 90 deg turns it to face the model's +x. -->
+        <visual name='visual'>
+          <pose>0 0 0.02 0.04 0 1.5708</pose>
+          <geometry>
+            <mesh>
+              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/standing person/3/files/meshes/standing.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+      </link>
+      <!-- UWB tag 1, worn on the back at waist height, so a robot following behind
+           has line of sight to it. No collision, so it doesn't change how the person
+           moves or what the LiDAR sees. -->
+      <link name='uwb_tag_1'>
+        <pose>-0.27 0 1.0 0 0 0</pose>
+        <gravity>false</gravity>
+        <inertial>
+          <mass>0.05</mass>
+          <inertia><ixx>1e-5</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1e-5</iyy><iyz>0</iyz><izz>1e-5</izz></inertia>
+        </inertial>
+        <visual name='visual'>
+          <geometry><box><size>0.03 0.06 0.09</size></box></geometry>
+          <material><ambient>0.96 0.55 0.13 1</ambient><diffuse>0.96 0.55 0.13 1</diffuse></material>
+        </visual>
+      </link>
+      <joint name='uwb_tag_1_joint' type='fixed'>
+        <parent>base_link</parent>
+        <child>uwb_tag_1</child>
+      </joint>
+      <plugin name="gz::sim::systems::VelocityControl" filename="gz-sim-velocity-control-system" />
+      <plugin name="gz::sim::systems::OdometryPublisher" filename="gz-sim-odometry-publisher-system">
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>human</robot_base_frame>
+        <odom_publish_frequency>20</odom_publish_frequency>
+      </plugin>
     </model>
 
   </world>

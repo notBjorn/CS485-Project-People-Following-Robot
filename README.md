@@ -88,12 +88,14 @@ src/people_follower/          ament_python package (our code)
   launch/sim.launch.py        Gazebo + TB4 spawn + RViz
   worlds/box_room.sdf         empty 10 m x 10 m walled room (M1)
   worlds/simple_colored_warehouse.sdf   30 m x 24 m warehouse, by Arshal on Gazebo Fuel (CC BY 4.0)
+                              + one person (as in person_world) wearing UWB tag 1
   worlds/person_world.sdf     25 m x 25 m walled square + one person (cmd_vel / odometry on /model/human/*)
   config/human_waypoints.yaml waypoints and speed for the person (human_waypoints node)
   maps/                       saved SLAM maps (<world>.yaml + .pgm)
   people_follower/            Python nodes go here; register them in setup.py
   config/                     parameter files
 src/turtlebot4_waypoint_auto_nav/   automated Nav2 navigation node (nav_automation_node)
+src/uwb_gazebo_plugin/        UWB ranging Gazebo plugin, vendored from UWBPX4Sim (see its README.md)
 scripts/                      helper scripts (see Scripts above)
 ```
 

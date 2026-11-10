@@ -1,0 +1,49 @@
+# Waypoints for the person in simple_colored_warehouse (scripts/launch_human_waypoints.sh):
+#   ./scripts/launch_sim.sh world:=simple_colored_warehouse
+#   ./scripts/launch_human_waypoints.sh warehouse
+#
+# A loop through all four rooms. The walls only let the person pass between
+# rooms at three gaps, so the path can't be a plain square:
+#   - north door  x = 0, y = 6..8    (top side of the loop, y = 7)
+#   - south door  x = 0, y = -8..-6  (bottom side, y = -7)
+#   - centre gap  y = 0, x = -2..2   (the only way between the north and south
+#                                     rooms, so both side edges pinch in to it)
+#
+#        NW room            NE room
+#   (-3.5,7) ---- door ---- (3.5,7)
+#      |                       |
+#   (-3.5,1.5)-(-1,1.5)  (1,1.5)-(3.5,1.5)     <- person starts at (2.5, 1.5)
+#              |    robot     |
+#   (-3.5,-1.5)-(-1,-1.5) (1,-1.5)-(3.5,-1.5)
+#      |                       |
+#   (-3.5,-7) --- door ---- (3.5,-7)
+#        SW room            SE room
+#
+# Corners stay at |x| = 3.5 to pass 1 m clear of the low boxes (blocker_*) that
+# cross the rooms from |x| = 4.5 to 9.5. Every edge is at least 0.9 m from the
+# nearest wall, box or shelf. The person walks the loop once (52 m, about
+# 4.5 min at 0.2 m/s including the pauses), ending back where it started,
+# then stands still. Set loop: true to keep walking it.
+#
+# The robot spawns at (0, 0); the centre lanes pass 1 m either side of it.
+human_waypoints:
+  ros__parameters:
+    # x, y pairs in the world frame (metres), visited in order, anticlockwise.
+    waypoints: [
+       3.5,  1.5,    3.5,  7.0,   # NE room, up to the north door's row
+      -3.5,  7.0,                 # through the north door into the NW room
+      -3.5,  1.5,   -1.0,  1.5,   # down the NW room, in to the centre gap
+      -1.0, -1.5,   -3.5, -1.5,   # through the gap, out into the SW room
+      -3.5, -7.0,                 # down the SW room
+       3.5, -7.0,                 # through the south door into the SE room
+       3.5, -1.5,    1.0, -1.5,   # up the SE room, in to the centre gap
+       1.0,  1.5,                 # through the gap back into the NE room
+       2.5,  1.5,                 # back to where the person started
+    ]
+    # m/s. Slower than the TurtleBot 4's top speed (about 0.31 m/s) so it can keep up
+    # while following (scripts/launch_follow.sh); at 0.3 it falls further behind at every turn.
+    speed: 0.2
+    max_turn_rate: 1.0  # rad/s
+    tolerance: 0.2      # m; how close counts as reaching a waypoint
+    loop: false         # true: start over after the last waypoint
+    pause: 1.0          # s to stand still at each waypoint
