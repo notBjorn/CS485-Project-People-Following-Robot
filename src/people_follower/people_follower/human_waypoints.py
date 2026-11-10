@@ -37,6 +37,7 @@ class HumanWaypoints(Node):
         self.declare_parameter('tolerance', 0.2)      # m; how close counts as reached
         self.declare_parameter('loop', True)          # start over after the last waypoint
         self.declare_parameter('pause', 1.0)          # s to stand still at each waypoint
+        self.declare_parameter('person', 'human')     # Gazebo model name of the person
 
         flat = list(self.get_parameter('waypoints').value)
         if len(flat) < 2 or len(flat) % 2:
@@ -53,8 +54,10 @@ class HumanWaypoints(Node):
         self.pause_until = None   # rclpy Time while standing at a waypoint
         self.done = False
 
-        self.cmd_pub = self.create_publisher(Twist, '/model/human/cmd_vel', 10)
-        self.create_subscription(Odometry, '/model/human/odometry', self.on_odom, 10)
+        person = self.get_parameter('person').value
+        self.odom_topic = f'/model/{person}/odometry'
+        self.cmd_pub = self.create_publisher(Twist, f'/model/{person}/cmd_vel', 10)
+        self.create_subscription(Odometry, self.odom_topic, self.on_odom, 10)
         self.create_timer(0.05, self.step)
         route = ' -> '.join(f'({x:g}, {y:g})' for x, y in self.waypoints)
         self.get_logger().info(
@@ -67,7 +70,7 @@ class HumanWaypoints(Node):
     def step(self):
         cmd = Twist()
         if self.pose is None:
-            self.get_logger().info('Waiting for /model/human/odometry...',
+            self.get_logger().info(f'Waiting for {self.odom_topic}...',
                                    throttle_duration_sec=5.0)
         elif self.done:
             pass
