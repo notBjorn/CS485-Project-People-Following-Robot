@@ -71,6 +71,8 @@ OPTIONS FOR launch_sim.sh
                        or along the waypoints in src/people_follower/config/human_waypoints.yaml
                        (edit them, then ./scripts/build.sh):
                          ./scripts/launch_human_waypoints.sh
+  world:=turtlebot_house  furnished 10 m x 8 m house (living room, kitchen,
+                       bedroom, office); robot starts in the living room
   world:=warehouse     TurtleBot 4 stock worlds: warehouse, maze, depot
   rviz:=false          skip RViz
   x:=1.0 y:=-2.0 yaw:=1.57    starting pose of the robot

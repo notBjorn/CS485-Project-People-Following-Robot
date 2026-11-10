@@ -17,6 +17,7 @@ cd CS485-Project
 ./scripts/launch_sim.sh                     # box_room world + TurtleBot 4 + RViz
 ./scripts/launch_sim.sh world:=warehouse    # stock TB4 worlds: warehouse, maze, depot
 ./scripts/launch_sim.sh world:=person_world # open floor + one person to follow
+./scripts/launch_sim.sh world:=turtlebot_house # furnished 10 m x 8 m house
 ./scripts/launch_sim.sh rviz:=false x:=1.0 y:=-2.0
 ./scripts/launch_teleop.sh                  # keyboard driving, in a second terminal
 ./scripts/launch_slam.sh                    # build a map, then ./scripts/save_map.sh <world>
@@ -86,6 +87,7 @@ src/people_follower/          ament_python package (our code)
   launch/sim.launch.py        Gazebo + TB4 spawn + RViz
   worlds/box_room.sdf         empty 10 m x 10 m walled room (M1)
   worlds/person_world.sdf     25 m x 25 m walled square + one person (cmd_vel / odometry on /model/human/*)
+  worlds/turtlebot_house.sdf  furnished 10 m x 8 m house (living room, kitchen, bedroom, office)
   config/human_waypoints.yaml waypoints and speed for the person (human_waypoints node)
   maps/                       saved SLAM maps (<world>.yaml + .pgm)
   people_follower/            Python nodes go here; register them in setup.py
