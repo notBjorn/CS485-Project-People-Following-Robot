@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>uwb_gazebo_plugin</name>
+  <version>0.1.0</version>
+  <description>
+    UWB ranging plugin for Gazebo Harmonic, vendored from UWBPX4Sim
+    (https://github.com/amartinezsilva/UWBPX4Sim, commit b99d92e).
+  </description>
+  <maintainer email="floatingbowl@gmail.com">Julian Contreras</maintainer>
+  <license>MIT</license>
+  <author>Andrés Martínez</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>gz_sim_vendor</depend>
+  <depend>gz_plugin_vendor</depend>
+  <depend>gz_transport_vendor</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
