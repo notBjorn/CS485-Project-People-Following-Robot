@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<!-- A person to add to a running simulation with scripts/spawn_person.sh, which replaces
+     PERSON_NAME with the name given. Same model as the person in the worlds: driven by
+     VelocityControl on /model/<name>/cmd_vel, true pose on /model/<name>/odometry.
+     Walk it with: ./scripts/launch_human_waypoints.sh person:=<name> params_file:=... -->
+<sdf version="1.7">
+<model name='PERSON_NAME'>
+  <link name='base_link'>
+    <!-- No gravity: VelocityControl only commands planar motion, so the
+         person stays upright and can't fall over when the robot bumps it -->
+    <gravity>false</gravity>
+    <inertial>
+      <pose>0.1 0 0.95 0 0 0</pose>
+      <mass>80.0</mass>
+      <inertia>
+        <ixx>24.88</ixx><ixy>0</ixy><ixz>0</ixz>
+        <iyy>25.73</iyy><iyz>0</iyz>
+        <izz>2.48</izz>
+      </inertia>
+    </inertial>
+    <!-- dartsim can't build mesh collisions, so collide as a cylinder
+         (lifted 1 cm off the floor so it slides without friction) -->
+    <collision name='body'>
+      <pose>0 0 0.91 0 0 0</pose>
+      <geometry><cylinder><radius>0.25</radius><length>1.8</length></cylinder></geometry>
+    </collision>
+    <!-- Mesh from Fuel model OpenRobotics/Standing person (cached in ~/.gz/fuel).
+         The mesh faces -y, so yaw 90 deg turns it to face the model's +x. -->
+    <visual name='visual'>
+      <pose>0 0 0.02 0.04 0 1.5708</pose>
+      <geometry>
+        <mesh>
+          <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/standing person/3/files/meshes/standing.dae</uri>
+        </mesh>
+      </geometry>
+    </visual>
+  </link>
+  <plugin name="gz::sim::systems::VelocityControl" filename="gz-sim-velocity-control-system" />
+  <plugin name="gz::sim::systems::OdometryPublisher" filename="gz-sim-odometry-publisher-system">
+    <odom_frame>world</odom_frame>
+    <robot_base_frame>PERSON_NAME</robot_base_frame>
+    <odom_publish_frequency>20</odom_publish_frequency>
+  </plugin>
+</model>
+</sdf>
