@@ -26,6 +26,7 @@ setup(
     entry_points={
         'console_scripts': [
             # 'follower = people_follower.follower:main',
+            'human_waypoints = people_follower.human_waypoints:main',
         ],
     },
 )
