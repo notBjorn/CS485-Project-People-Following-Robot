@@ -1,0 +1,40 @@
+# Parameters for sensor_noise: makes the simulated camera and person detections
+# behave more like real hardware. Used by:
+#   ./scripts/launch_person_detector.sh noise:=true
+#   ./scripts/launch_person_detector.sh noise:=true noise_params:=/path/to/your.yaml
+# Set any value to 0 to turn that effect off. Edit, then run ./scripts/build.sh.
+sensor_noise:
+  ros__parameters:
+    seed: 0                     # 0: different noise every run; any other number repeats it
+
+    # --- Depth (OAK-D stereo) ---------------------------------------------------
+    # Depth comes from disparity d = fx * baseline / z (fx ~ 220 px for the 320x240
+    # preview), so depth error grows with distance squared:
+    #   sigma_z ~ z^2 * disparity_sigma_px / (fx * baseline)
+    #   -> about 2 cm at 2 m, 15 cm at 5 m, 60 cm at 10 m with these values.
+    baseline_m: 0.075           # OAK-D stereo baseline (check your model's datasheet)
+    disparity_sigma_px: 0.1     # stereo matching noise
+    correlated_fraction: 0.8    # share of the noise that is smooth over nearby pixels
+    correlation_px: 8           # size of those smooth blobs
+    subpixel_step_px: 0.125     # disparity resolution (3-bit subpixel = 1/8 px)
+    edge_jump_m: 0.25           # depth edges bigger than this lose their depth...
+    edge_hole_px: 1             # ...in a band this many pixels wide
+    random_hole_fraction: 0.02  # plus this share of pixels at random
+    min_depth_m: 0.35           # no depth closer than this...
+    max_depth_m: 15.0           # ...or further than this
+
+    # --- Colour image --------------------------------------------------------------
+    pixel_sigma: 5.0            # Gaussian noise, in 0-255 levels
+    brightness_range: 0.15      # random +/- per frame, as a fraction of full range
+    contrast_range: 0.10        # random +/- per frame
+    exposure_s: 0.02            # motion blur = turn rate * exposure * fx pixels
+
+    # --- Timing ----------------------------------------------------------------------
+    max_rate_hz: 15.0           # camera frames per second passed on (sim gives 30)
+    frame_drop_prob: 0.02       # extra frames lost at random (colour and depth together)
+    latency_s: 0.1              # frames arrive this late (timestamps stay at capture)
+
+    # --- Person detections -------------------------------------------------------------
+    detection_drop_prob: 0.05   # each box is missed with this probability
+    box_jitter_px: 2.0          # Gaussian wobble of box centre and size
+    false_positive_prob: 0.01   # chance per frame of a false box on a random spot

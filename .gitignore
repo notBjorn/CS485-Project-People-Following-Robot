@@ -58,3 +58,7 @@ __pycache__/
 
 # Recorded test runs (scripts/record_bag.sh)
 bags/
+
+# YOLO: Python environment and downloaded models (scripts/setup_yolo.sh)
+/.venv-yolo/
+/models/

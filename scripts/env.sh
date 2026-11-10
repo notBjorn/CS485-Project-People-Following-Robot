@@ -12,3 +12,6 @@ fi
 # On a shared network, give each person their own ID: export ROS_DOMAIN_ID=<0-101>
 export ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-30}
 export GZ_IP=127.0.0.1
+# Python environment with YOLO (Ultralytics), made by scripts/setup_yolo.sh
+export PROJECT_ROOT
+export YOLO_VENV="$PROJECT_ROOT/.venv-yolo"
