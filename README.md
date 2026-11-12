@@ -45,6 +45,9 @@ Harmonic and RViz2.
    ./scripts/launch_sim.sh
    ```
 
+The demo scripts (`demo_follow.sh`, `demo_two_people.sh`) do steps 3 and 4 themselves,
+so after steps 1 and 2 you can go straight to a demo.
+
 Rebuild with `./scripts/build.sh` after pulling changes that add files. Edits to
 existing Python files apply without rebuilding.
 

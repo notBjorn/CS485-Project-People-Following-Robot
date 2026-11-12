@@ -66,8 +66,8 @@ Each opens Gazebo with the TurtleBot 4 and RViz in one world. Extra settings pas
 
 | Script | What it does |
 |---|---|
-| `demo_follow.sh [noise:=true]` | Demo 1: the robot follows a person once round the coloured box in each of the warehouse's four rooms. Opens Gazebo and a camera window, and runs until Ctrl+C. |
-| `demo_two_people.sh [noise:=true]` | Demo 2: the same in rooms 1 and 2, with a second person crossing the target's path. On Ctrl+C it prints who the robot was following. |
+| `demo_follow.sh [noise:=true]` | Demo 1: the robot follows a person once round the coloured box in each of the warehouse's four rooms. Builds the workspace (and sets up YOLO the first time), opens Gazebo and a camera window, and runs until Ctrl+C. |
+| `demo_two_people.sh [noise:=true]` | Demo 2: the same in rooms 1 and 2, with a second person crossing the target's path. Builds and sets up YOLO like Demo 1. On Ctrl+C it prints who the robot was following. |
 
 ## Tests
 
@@ -91,4 +91,4 @@ Each opens Gazebo with the TurtleBot 4 and RViz in one world. Extra settings pas
 |---|---|
 | `env.sh` | Sets up ROS 2 and the workspace for the other scripts. Run `source scripts/env.sh` to use `ros2` commands by hand. |
 | `sim_start.sh` | Starts the simulation and waits until the robot is ready; the launch scripts use it. |
-| `demo_common.sh` | Shared steps for the two demo scripts. |
+| `demo_common.sh` | Shared steps for the two demo scripts, including building the workspace (from scratch if `install/` holds another branch's packages) and setting up YOLO if it isn't yet. |

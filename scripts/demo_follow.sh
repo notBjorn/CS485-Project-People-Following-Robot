@@ -9,7 +9,8 @@
 #
 # Opens Gazebo and a camera window (the robot's view with YOLO's boxes). Runs until
 # Ctrl+C, which stops everything. Logs: log/demo_follow/.
-# Needs ./scripts/setup_yolo.sh once, and a built workspace (./scripts/build.sh).
+# Builds the workspace first (./scripts/build.sh), and sets up YOLO the first time
+# (./scripts/setup_yolo.sh), so there are no separate setup steps.
 source "$(dirname "$0")/demo_common.sh"
 NOISE="${1:-noise:=false}"
 demo_setup demo_follow

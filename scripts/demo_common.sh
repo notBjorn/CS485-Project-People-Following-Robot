@@ -1,14 +1,46 @@
 # Shared steps for demo_follow.sh and demo_two_people.sh (sourced, not run).
 # Everything a demo starts is stopped when it exits (Ctrl+C, or a failed step).
+
+# Build first, so the demo always runs this branch's code; it takes a few seconds when
+# nothing has changed. A package in install/ that this branch doesn't have was built on
+# another branch, so then build/ and install/ are cleared and the build starts fresh.
+_build_log="$(mktemp)"
+echo "Building the workspace..."
+if ! (
+    source /opt/ros/jazzy/setup.bash
+    cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
+    packages=$(colcon list --names-only --base-paths src)
+    for dir in install/*/; do
+        [ -d "$dir" ] || continue
+        if ! grep -qx "$(basename "$dir")" <<< "$packages"; then
+            echo "install/ has $(basename "$dir") from another branch; building from scratch"
+            rm -rf build install
+            break
+        fi
+    done
+    ./scripts/build.sh
+) > "$_build_log" 2>&1; then
+    tail -n 30 "$_build_log" >&2
+    echo "The build failed (full output: $_build_log)." >&2
+    exit 1
+fi
+rm -f "$_build_log"
+
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/sim_start.sh"
 SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG="$(ros2 pkg prefix people_follower)/share/people_follower/config"
 DEMO_PIDS=()
 
-if [ ! -x "$YOLO_VENV/bin/python3" ]; then
-    echo "No YOLO environment at $YOLO_VENV - run ./scripts/setup_yolo.sh first" >&2
-    exit 1
+# Set up YOLO the first time (or if a previous setup didn't finish): the Python
+# environment and the model. Several minutes and about 3 GB; later runs skip it.
+if ! "$YOLO_VENV/bin/python3" -c 'import ultralytics' > /dev/null 2>&1 \
+        || [ ! -f "$PROJECT_ROOT/models/yolo26n.pt" ]; then
+    echo "Setting up YOLO for person detection (first run only, about 3 GB)..."
+    if ! "$SCRIPTS/setup_yolo.sh"; then
+        echo "YOLO setup failed - see the messages above" >&2
+        exit 1
+    fi
 fi
 
 # demo_setup <name>: log folder log/<name>/, and clean-up on exit.
