@@ -45,8 +45,8 @@ Each opens Gazebo with the TurtleBot 4 (carrying four UWB anchors) and RViz in o
 
 | Script | What it does |
 |---|---|
-| `demo_uwb_follow.sh` | Demo 1: the robot follows the person by UWB once round the coloured box in each of the warehouse's four rooms. Opens Gazebo and runs until Ctrl+C. |
-| `demo_uwb_two_people.sh` | Demo 2: the same in rooms 1 and 2, with a second person (no tag) crossing the target's path. On Ctrl+C it prints who the robot was following. |
+| `demo_uwb_follow.sh` | Demo 1: the robot follows the person by UWB once round the coloured box in each of the warehouse's four rooms. Builds the workspace first, opens Gazebo and runs until Ctrl+C. |
+| `demo_uwb_two_people.sh` | Demo 2: the same in rooms 1 and 2, with a second person (no tag) crossing the target's path. Builds the workspace first. On Ctrl+C it prints who the robot was following. |
 
 ## Mapping
 
@@ -87,4 +87,4 @@ Each opens Gazebo with the TurtleBot 4 (carrying four UWB anchors) and RViz in o
 |---|---|
 | `env.sh` | Sets up ROS 2 and the workspace for the other scripts. Run `source scripts/env.sh` to use `ros2` commands by hand. |
 | `sim_start.sh` | Starts the simulation and waits until the robot is ready; the launch scripts use it. |
-| `demo_uwb_common.sh` | Shared steps for the two UWB demo scripts. |
+| `demo_uwb_common.sh` | Shared steps for the two UWB demo scripts, including building the workspace (from scratch if `install/` holds another branch's packages). |

@@ -12,7 +12,7 @@
 #   ./scripts/demo_uwb_two_people.sh
 #
 # Opens Gazebo. Ctrl+C stops everything. Logs: log/demo_uwb_two_people/.
-# Needs a built workspace (./scripts/build.sh).
+# Builds the workspace first (./scripts/build.sh), so there is no separate build step.
 source "$(dirname "$0")/demo_uwb_common.sh"
 demo_setup demo_uwb_two_people
 demo_start_sim

@@ -1,5 +1,31 @@
 # Shared steps for demo_uwb_follow.sh and demo_uwb_two_people.sh (sourced, not run).
 # Everything a demo starts is stopped when it exits (Ctrl+C, or a failed step).
+
+# Build first, so the demo always runs this branch's code; it takes a few seconds when
+# nothing has changed. A package in install/ that this branch doesn't have was built on
+# another branch, so then build/ and install/ are cleared and the build starts fresh.
+_build_log="$(mktemp)"
+echo "Building the workspace..."
+if ! (
+    source /opt/ros/jazzy/setup.bash
+    cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
+    packages=$(colcon list --names-only --base-paths src)
+    for dir in install/*/; do
+        [ -d "$dir" ] || continue
+        if ! grep -qx "$(basename "$dir")" <<< "$packages"; then
+            echo "install/ has $(basename "$dir") from another branch; building from scratch"
+            rm -rf build install
+            break
+        fi
+    done
+    ./scripts/build.sh
+) > "$_build_log" 2>&1; then
+    tail -n 30 "$_build_log" >&2
+    echo "The build failed (full output: $_build_log)." >&2
+    exit 1
+fi
+rm -f "$_build_log"
+
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/sim_start.sh"
 SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

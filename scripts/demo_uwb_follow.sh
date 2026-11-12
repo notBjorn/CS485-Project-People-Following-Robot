@@ -9,7 +9,7 @@
 # Opens Gazebo. The person stands still for the first few seconds while the localizer
 # calibrates the anchors, then starts walking. Runs until Ctrl+C, which stops
 # everything. Logs: log/demo_uwb_follow/.
-# Needs a built workspace (./scripts/build.sh).
+# Builds the workspace first (./scripts/build.sh), so there is no separate build step.
 source "$(dirname "$0")/demo_uwb_common.sh"
 demo_setup demo_uwb_follow
 demo_start_sim
