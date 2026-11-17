@@ -26,7 +26,7 @@ the trail, staying follow_distance behind the person (measured along the trail).
 Subscribes /uwb/person_odom (geometry_msgs/PointStamped), /uwb/person_velocity
 (geometry_msgs/Vector3Stamped) and /scan; publishes
 /cmd_vel (geometry_msgs/TwistStamped) and the trail as /uwb/trail (nav_msgs/Path).
-The robot must be undocked first (scripts/launch_follow.sh does it).
+The TurtleBot 4 must be undocked first (scripts/launch_follow.sh does it; TIAGo has no dock).
 """
 
 import math

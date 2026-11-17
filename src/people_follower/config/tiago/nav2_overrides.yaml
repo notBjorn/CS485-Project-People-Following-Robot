@@ -1,0 +1,27 @@
+# TIAGo changes to Nav2's stock Jazzy parameters
+# (/opt/ros/jazzy/share/nav2_bringup/params/nav2_params.yaml).
+# tiago.launch.py merges this file on top of the stock one, and also sets
+# use_sim_time: true and enable_stamped_cmd_vel: true in every node.
+# Only list what differs from the stock file. Edit, then ./scripts/build.sh.
+#
+# TIAGo's base (PMB2) is round, 0.54 m across; the base laser is at the front,
+# 0.095 m above the floor, and publishes /scan (frame base_laser_link). The
+# stock file already uses base_footprint, odom, map and /scan.
+
+amcl:
+  ros__parameters:
+    laser_max_range: 25.0       # SICK TIM571
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      robot_radius: 0.3
+      inflation_layer:
+        inflation_radius: 0.6
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      robot_radius: 0.3
+      inflation_layer:
+        inflation_radius: 0.7

@@ -4,6 +4,7 @@
 # Don't wait for all of Nav2 here: it can't finish starting until the node sets the initial pose.
 # Usage: ./scripts/nav_demo.sh [sim args] [-- node args]
 #   e.g. ./scripts/nav_demo.sh world:=warehouse -- -p goal_x:=3.0 -p goal_y:=-2.0
+#        ./scripts/nav_demo.sh robot:=turtlebot4    (TIAGo is the default)
 source "$(dirname "$0")/env.sh"
 source "$(dirname "$0")/sim_start.sh"
 SIM_ARGS=(); NODE_ARGS=()

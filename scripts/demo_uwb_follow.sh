@@ -4,7 +4,8 @@
 # round the coloured box in each of the four rooms (134 m, about 8 minutes) and stops
 # back at the start; the robot follows their path.
 #
-#   ./scripts/demo_uwb_follow.sh
+#   ./scripts/demo_uwb_follow.sh                      # TIAGo
+#   ./scripts/demo_uwb_follow.sh robot:=turtlebot4
 #
 # Opens Gazebo. The person stands still for the first few seconds while the localizer
 # calibrates the anchors, then starts walking. Runs until Ctrl+C, which stops

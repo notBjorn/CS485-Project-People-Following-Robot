@@ -1,7 +1,13 @@
 # CS485 Project: People-Following Robot
 
-A simulated TurtleBot 4 that follows a person using UWB (ultra-wideband) ranging,
-with ROS 2 Jazzy, Gazebo Harmonic and RViz2.
+A simulated robot that follows a person using UWB (ultra-wideband) ranging, with
+ROS 2 Jazzy, Gazebo Harmonic and RViz2. The robot is PAL's TIAGo by default, or the
+TurtleBot 4 with `robot:=turtlebot4` on any launch, demo or mapping script.
+
+TIAGo is the Gazebo Harmonic port from the
+[EasyNav playgrounds](https://github.com/EasyNavigation/easynav_playgrounds)
+(`easynav_playground_tiago_description` / `_worlds`; EasyNav itself isn't used). PAL's
+own TIAGo simulation only supports ROS 2 Humble with Gazebo Classic.
 
 ## Requirements
 
@@ -11,7 +17,7 @@ with ROS 2 Jazzy, Gazebo Harmonic and RViz2.
 
 ## Setup (once per machine)
 
-1. Install the TurtleBot 4 simulator:
+1. Install the TurtleBot 4 simulator (also needed for TIAGo runs, which share its tools):
 
    ```bash
    sudo apt install ros-jazzy-turtlebot4-simulator ros-jazzy-turtlebot4-desktop \
@@ -25,21 +31,43 @@ with ROS 2 Jazzy, Gazebo Harmonic and RViz2.
    cd CS485-Project
    ```
 
-3. Build the workspace. This also installs any missing ROS dependencies and builds the
-   UWB Gazebo plugin (`src/uwb_gazebo_plugin`):
+3. Build the workspace. This also installs any missing ROS dependencies (including
+   TIAGo's model, Nav2 and slam_toolbox) and builds the UWB Gazebo plugin
+   (`src/uwb_gazebo_plugin`):
 
    ```bash
    ./scripts/build.sh
    ```
 
-4. Check it works: this should open Gazebo with the TurtleBot 4 and RViz.
+   If it ends with a warning that TIAGo's model is not installed, run
+   `sudo apt install ros-jazzy-easynav-playground-tiago-worlds`, or build it from
+   source with `./scripts/fetch_tiago_source.sh`.
+
+4. Check it works: this should open Gazebo with TIAGo and RViz.
 
    ```bash
-   ./scripts/launch_sim.sh
+   ./scripts/launch_sim.sh                       # robot:=turtlebot4 for the TurtleBot 4
    ```
 
 Rebuild with `./scripts/build.sh` after pulling changes that add files. Edits to
 existing Python files apply without rebuilding.
+
+## TIAGo and the TurtleBot 4
+
+Both robots carry UWB anchors 1-4 and look the same to the rest of the project:
+drive on `/cmd_vel` (TwistStamped), odometry on `/odom`, laser on `/scan`. On TIAGo,
+`tiago_base_relay` connects those to its `mobile_base_controller`. The differences:
+
+| | TIAGo | TurtleBot 4 |
+|---|---|---|
+| Camera | `/head_front_camera/rgb/image_raw` | `/oakd/rgb/preview/image_raw` |
+| UWB anchors | base, 0.30 m apart (`urdf/tiago_uwb.urdf.xacro`) | top plate, 0.17 m apart |
+| Follow distance (`launch_follow.sh`) | 0.7 m | 0.5 m |
+| Dock | none: nothing to undock | starts docked; scripts undock it |
+| SLAM / Nav2 config | stock Jazzy + `config/tiago/*_overrides.yaml` | TurtleBot 4's own |
+
+`launch_follow.sh`, `auto_map.sh`, `make_map.sh` and `nav_automation_node` check which
+robot is running. See `How-To-Run/Master_Script_List.md` for every script.
 
 ## Network
 

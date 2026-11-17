@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CS485 Robot Guide</title>
-<meta name="description" content="How to set up, run, troubleshoot and understand the CS485 people-following TurtleBot 4 simulation.">
+<meta name="description" content="How to set up, run, troubleshoot and understand the CS485 people-following TIAGo / TurtleBot 4 simulation.">
 <!--
   HOW TO UPDATE THIS FILE
   - It's one self-contained file: no build step, no internet needed. Open it in a browser.
@@ -389,9 +389,9 @@ footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border
   <div class="meta">
     <span class="pill">ROS 2 <b>Jazzy</b></span>
     <span class="pill">Gazebo <b>Harmonic</b></span>
-    <span class="pill">Robot <b>TurtleBot 4</b></span>
+    <span class="pill">Robot <b>TIAGo</b> or <b>TurtleBot 4</b></span>
     <span class="pill">Ubuntu <b>24.04</b></span>
-    <span class="pill">Last updated <b>2026-11-03</b></span>
+    <span class="pill">Last updated <b>2026-11-17</b></span>
   </div>
   <svg class="deco" width="230" height="140" viewBox="0 0 230 140" aria-hidden="true">
     <path d="M10 120 C 60 120, 70 60, 120 60 S 190 30, 220 20" stroke="var(--accent)" stroke-width="2.5" fill="none" stroke-dasharray="6 6" class="d-flow"/>
@@ -443,7 +443,8 @@ footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border
         <div class="term"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>Terminal 2 · keep focused</span></div>
           <pre><code>./scripts/launch_teleop.sh</code></pre></div>
       </div>
-      <p>Same keys as above. The TurtleBot 4 base takes <em>stamped</em> velocity commands, and the script sets that up for you.</p>
+      <p>Same keys as above. Both robots take <em>stamped</em> velocity commands on <code>/cmd_vel</code>, and the script sets that up for you.
+      Add <code>robot:=turtlebot4</code> to the simulation command to drive the TurtleBot 4 instead of TIAGo.</p>
     </div>
     <div class="tabpanel">
       <p>Navigation needs a saved map. warehouse, maze and depot ship with one. <code>box_room</code> and
@@ -464,6 +465,37 @@ footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border
   <p>With a simulation running, this reports sensor rates, whether the robot is localized, and which navigation nodes are up:</p>
   <pre><code>./scripts/check_sim.sh</code></pre>
   <p>To stop: press <kbd>Ctrl</kbd>+<kbd>C</kbd> in each terminal. If something is left behind, run <code>./scripts/kill_sim.sh</code>.</p>
+</section>
+
+<!-- =============================================================== -->
+<section id="robots">
+  <h2>Robots: TIAGo and TurtleBot 4</h2>
+  <p>Every launch, demo and mapping script takes <code>robot:=tiago</code> (the default) or <code>robot:=turtlebot4</code>, e.g.
+  <code>./scripts/demo_uwb_follow.sh robot:=turtlebot4</code>. Both carry UWB anchors 1–4 and the rest of the project sees the same
+  topics on both, so teleop, UWB following, auto-mapping and navigation don't change. <code>launch_follow.sh</code>,
+  <code>auto_map.sh</code> and <code>nav_automation_node</code> check which robot is running and only undock the TurtleBot 4.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th></th><th>TIAGo</th><th>TurtleBot 4</th></tr></thead>
+    <tbody>
+      <tr><td>Drive</td><td><code>/cmd_vel</code> (TwistStamped), relayed to <code>/mobile_base_controller/cmd_vel</code></td><td><code>/cmd_vel</code> (TwistStamped)</td></tr>
+      <tr><td>Odometry</td><td><code>/odom</code>, relayed from <code>/mobile_base_controller/odom</code></td><td><code>/odom</code></td></tr>
+      <tr><td>2D laser</td><td><code>/scan</code>, SICK TIM571, 25 m, at the front of the base</td><td><code>/scan</code>, RPLIDAR, 12 m</td></tr>
+      <tr><td>Camera</td><td><code>/head_front_camera/rgb/image_raw</code> + depth (on the head)</td><td><code>/oakd/rgb/preview/image_raw</code> + depth</td></tr>
+      <tr><td>UWB anchors</td><td>on the base, 0.30 m above the floor, 0.30 m apart (<code>urdf/tiago_uwb.urdf.xacro</code>)</td><td>on the top plate, 0.17 m apart (<code>urdf/turtlebot4_uwb.urdf.xacro</code>)</td></tr>
+      <tr><td>Follow distance</td><td>0.7 m (base 0.54 m across)</td><td>0.5 m</td></tr>
+      <tr><td>SLAM / AMCL / Nav2</td><td>stock Jazzy parameters + <code>config/tiago/*_overrides.yaml</code></td><td>TurtleBot 4's own launch files</td></tr>
+      <tr><td>Docking</td><td>none</td><td>yes</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Where TIAGo comes from</h3>
+  <p>PAL Robotics' own TIAGo simulation only supports ROS 2 Humble with Gazebo Classic. We use the Gazebo Harmonic
+  port in the EasyNav playgrounds: <code>easynav_playground_tiago_description</code> (URDF, meshes, ros2_control
+  controllers) and <code>easynav_playground_tiago_worlds</code> (its ROS ↔ Gazebo bridge config). EasyNav itself
+  is not used; navigation is still Nav2.</p>
+  <p><code>tiago.launch.py</code> spawns that robot, with UWB anchors added, into our worlds: it adds Gazebo's Sensors, Imu and
+  ForceTorque systems to a temporary copy of the world when they are missing, starts every controller, reuses the EasyNav bridge
+  config with <code>/scan_raw</code> renamed to <code>/scan</code>, and runs <code>tiago_base_relay</code> for <code>/cmd_vel</code>
+  and <code>/odom</code>. Tune TIAGo's Nav2 or SLAM in <code>src/people_follower/config/tiago/</code>, then <code>./scripts/build.sh</code>.</p>
 </section>
 
 <!-- =============================================================== -->
@@ -501,7 +533,10 @@ sudo rosdep init &amp;&amp; rosdep update</code></pre>
 <pre><code>git clone git@github.com:notBjorn/CS485-Project-People-Following-Robot.git
 cd CS485-Project-People-Following-Robot
 git switch person-world      <span class="c"># or main once things are merged</span>
-./scripts/build.sh</code></pre></li>
+./scripts/build.sh</code></pre>
+          <p>If <code>build.sh</code> ends with a warning that TIAGo's model is not installed, run
+          <code>sudo apt install ros-jazzy-easynav-playground-tiago-worlds</code>, or build it from source with
+          <code>./scripts/fetch_tiago_source.sh</code>.</p></li>
         <li><b>Pre-download the person model</b> <span class="tag info">once</span>
 <pre><code>source /opt/ros/jazzy/setup.bash
 gz fuel download -u "https://fuel.gazebosim.org/1.0/OpenRobotics/models/Standing person"</code></pre></li>
@@ -946,6 +981,9 @@ exit</code></pre></div>
 <section id="changelog">
   <h2>Changelog</h2>
   <div class="timeline">
+    <div class="ev major"><time>2026-11-17</time><h4>TIAGo</h4>
+      <p>TIAGo (Gazebo Harmonic port from the EasyNav playgrounds, with UWB anchors) is the default robot; <code>robot:=turtlebot4</code>
+      keeps the TurtleBot 4. UWB following, auto-mapping, the demos and <code>nav_automation_node</code> work on both. <span class="muted">(TIAGo_uwb)</span></p></div>
     <div class="ev major"><time>2026-11-03</time><h4>Waypoint walking for the person</h4>
       <p><code>human_waypoints</code> node + <code>launch_human_waypoints.sh</code>; the person now publishes odometry and faces its walking direction. <span class="muted">(person-world · 28416c6)</span></p></div>
     <div class="ev major"><time>2026-11-03</time><h4>person_world</h4>

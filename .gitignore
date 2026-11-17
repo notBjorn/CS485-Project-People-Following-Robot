@@ -63,3 +63,6 @@ bags/
 # person-recognition branch)
 /.venv-yolo/
 /models/
+
+# EasyNav TIAGo sources cloned by scripts/fetch_tiago_source.sh
+src/external/

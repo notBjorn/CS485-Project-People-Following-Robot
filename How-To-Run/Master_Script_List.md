@@ -1,19 +1,24 @@
 # Master Script List
 
-Every shell script in `scripts/` on this branch (map-and-UWB-plugin). Run them from the
+Every shell script in `scripts/` on this branch (TIAGo_uwb). Run them from the
 project folder, e.g. `./scripts/open_box_room.sh`. Arguments in `[brackets]` are
 optional; Ctrl+C stops a script and everything it started.
+
+The robot is TIAGo unless you add `robot:=turtlebot4` to a script that opens a world
+(`open_*`, `launch_*`, the demos, `nav_demo.sh`; for `auto_map.sh` and `make_map.sh`,
+after the world name). Scripts that work with a running sim check which robot it is.
 
 ## Building
 
 | Script | What it does |
 |---|---|
-| `build.sh` | Installs missing ROS dependencies and builds the workspace, including the UWB Gazebo plugin. Run it after pulling changes that add files, nodes or maps. |
+| `build.sh` | Installs missing ROS dependencies and builds the workspace, including the UWB Gazebo plugin. Run it after pulling changes that add files, nodes or maps. Warns if TIAGo's model is missing. |
+| `fetch_tiago_source.sh` | Fallback when apt/rosdep can't install TIAGo's model: clones it into `src/external/` (not committed), keeps the two TIAGo packages, and builds. |
 | `clean_build.sh` | Deletes `build/`, `install/` and `log/`, then builds from scratch. Use it when a normal build behaves as if it's out of date. |
 
 ## Opening a world
 
-Each opens Gazebo with the TurtleBot 4 (carrying four UWB anchors) and RViz in one world. Extra settings pass through, e.g. `rviz:=false`.
+Each opens Gazebo with the robot (TIAGo, or the TurtleBot 4 with `robot:=turtlebot4`; both carry four UWB anchors) and RViz in one world. Extra settings pass through, e.g. `rviz:=false`.
 
 | Script | What it does |
 |---|---|
@@ -39,21 +44,21 @@ Each opens Gazebo with the TurtleBot 4 (carrying four UWB anchors) and RViz in o
 
 | Script | What it does |
 |---|---|
-| `launch_follow.sh` | Undocks the robot and starts UWB following: the localizer calibrates the anchors (keep the person still for a few seconds), then the robot follows the tag wearer's path. Start the warehouse with `yaw:=3.14159` first. |
+| `launch_follow.sh` | Starts UWB following (undocking the TurtleBot 4 first): the localizer calibrates the anchors (keep the person still for a few seconds), then the robot follows the tag wearer's path, 0.7 m behind on TIAGo or 0.5 m on the TurtleBot 4. Start the warehouse with `yaw:=3.14159` first. |
 
 ## Demos
 
 | Script | What it does |
 |---|---|
-| `demo_uwb_follow.sh` | Demo 1: the robot follows the person by UWB once round the coloured box in each of the warehouse's four rooms. Builds the workspace first, opens Gazebo and runs until Ctrl+C. |
-| `demo_uwb_two_people.sh` | Demo 2: the same in rooms 1 and 2, with a second person (no tag) crossing the target's path. Builds the workspace first. On Ctrl+C it prints who the robot was following. |
+| `demo_uwb_follow.sh [robot:=turtlebot4]` | Demo 1: the robot follows the person by UWB once round the coloured box in each of the warehouse's four rooms. Builds the workspace first, opens Gazebo and runs until Ctrl+C. |
+| `demo_uwb_two_people.sh [robot:=turtlebot4]` | Demo 2: the same in rooms 1 and 2, with a second person (no tag) crossing the target's path. Builds the workspace first. On Ctrl+C it prints who the robot was following. |
 
 ## Mapping
 
 | Script | What it does |
 |---|---|
-| `auto_map.sh [world] [map name]` | The robot maps the world by itself: it explores until no unmapped edges are left, then saves the map and rebuilds. Watch the map grow in RViz. |
-| `make_map.sh [world]` | Maps a world while you drive with the keyboard (it opens a teleop window), then saves the map when you press Enter. |
+| `auto_map.sh [world] [map name] [settings]` | The robot maps the world by itself: it explores until no unmapped edges are left, then saves the map and rebuilds. Watch the map grow in RViz. |
+| `make_map.sh [world] [settings]` | Maps a world while you drive with the keyboard (it opens a teleop window), then saves the map when you press Enter. |
 | `launch_slam.sh [settings]` | Opens a world with SLAM running, for mapping by hand. |
 | `save_map.sh [name]` | Saves the map SLAM has built so far to `src/people_follower/maps/<name>`. Name it after the world, then run `build.sh`. |
 
@@ -71,7 +76,7 @@ Each opens Gazebo with the TurtleBot 4 (carrying four UWB anchors) and RViz in o
 
 | Script | What it does |
 |---|---|
-| `check_sim.sh` | Health check for a running simulation: sensor rates, localization and Nav2 state. Run it when nothing seems to happen. |
+| `check_sim.sh` | Health check for a running simulation: which robot, sensor rates, UWB ranges, (TIAGo) its base relay and controller, localization and Nav2 state. Run it when nothing seems to happen. |
 | `record_bag.sh [name] [--no-camera]` | Records the robot's sensors, position and commands to `bags/` for replaying later. |
 
 ## Troubleshooting

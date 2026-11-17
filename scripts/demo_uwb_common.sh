@@ -1,5 +1,13 @@
 # Shared steps for demo_uwb_follow.sh and demo_uwb_two_people.sh (sourced, not run).
 # Everything a demo starts is stopped when it exits (Ctrl+C, or a failed step).
+# The robot is TIAGo unless the demo is run with robot:=turtlebot4.
+
+ROBOT=tiago
+for _arg in "$@"; do
+    case "$_arg" in
+        robot:=*) ROBOT=${_arg#robot:=} ;;
+    esac
+done
 
 # Build first, so the demo always runs this branch's code; it takes a few seconds when
 # nothing has changed. A package in install/ that this branch doesn't have was built on
@@ -51,13 +59,15 @@ demo_cleanup() {
 }
 
 # demo_start_sim: the warehouse (UWB plugin, person wearing tag 1, robot carrying
-# anchors 1-4), robot at the origin facing away from the dock so it never drives over it.
+# anchors 1-4), robot at the origin facing away from the TurtleBot 4's dock so it never
+# drives over it (TIAGo has no dock; it faces the same way so the demos match).
 demo_start_sim() {
-    echo "Starting Gazebo with the warehouse (log: $LOGS/sim.log)..."
-    start_sim "$LOGS/sim.log" world:=simple_colored_warehouse rviz:=false yaw:=3.14159 || exit 1
+    echo "Starting Gazebo with the warehouse and $ROBOT (log: $LOGS/sim.log)..."
+    start_sim "$LOGS/sim.log" robot:="$ROBOT" world:=simple_colored_warehouse rviz:=false \
+        yaw:=3.14159 || exit 1
 }
 
-# demo_start_follower: undock, then uwb_localizer + uwb_follower. Waits until the
+# demo_start_follower: undock (TurtleBot 4), then uwb_localizer + uwb_follower. Waits until the
 # localizer has calibrated the anchors (the person must stand still until then).
 demo_start_follower() {
     echo "Undocking and starting the UWB follower..."

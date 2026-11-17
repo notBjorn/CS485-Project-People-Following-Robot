@@ -1,0 +1,54 @@
+<?xml version="1.0" ?>
+<!-- TIAGo with four UWB anchors on its base, for the UWB Gazebo plugin
+     (src/uwb_gazebo_plugin). Includes the EasyNav TIAGo description unchanged
+     (PAL's TIAGo ported to Gazebo Harmonic), then adds the anchors, the same way
+     turtlebot4_uwb.urdf.xacro does for the TurtleBot 4. Spawned by launch/tiago.launch.py.
+
+     The anchors are fixed to base_footprint (not the torso or head, which move),
+     because uwb_localizer reads their positions from TF once at start-up.
+
+     The plugin finds anchors by link name (uwb_anchor_<id>). Gazebo merges links
+     on fixed joints into their parent when it converts a URDF, which would remove
+     those names, so each joint has preserveFixedJoint. The anchors also get TF
+     frames (uwb_anchor_<id>) from robot_state_publisher. -->
+<robot name="tiago" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find easynav_playground_tiago_description)/urdf/tiago.urdf.xacro"/>
+
+  <!-- Just above the top of TIAGo's round base (PMB2, 0.54 m across), at the corners of
+       a 0.30 m square: 0.30 m apart side to side, 0.42 m diagonally. That's wider than
+       on the TurtleBot 4 (0.17 / 0.24 m), which helps the localizer's direction estimate.
+       The torso column stands behind the base's centre; the anchors are visual only, so
+       any overlap with it changes nothing. -->
+  <xacro:property name="uwb_anchor_z" value="0.30"/>
+  <xacro:property name="uwb_anchor_xy" value="0.15"/>
+
+  <xacro:macro name="uwb_anchor" params="id x y">
+    <joint name="uwb_anchor_${id}_joint" type="fixed">
+      <parent link="base_footprint"/>
+      <child link="uwb_anchor_${id}"/>
+      <origin xyz="${x} ${y} ${uwb_anchor_z}" rpy="0 0 0"/>
+    </joint>
+    <!-- Visual only: no collision, so it changes nothing about how the robot
+         drives or what its sensors see. -->
+    <link name="uwb_anchor_${id}">
+      <visual>
+        <geometry><box size="0.025 0.04 0.012"/></geometry>
+        <material name="uwb_anchor_white"><color rgba="0.92 0.92 0.92 1"/></material>
+      </visual>
+      <inertial>
+        <mass value="0.01"/>
+        <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/>
+      </inertial>
+    </link>
+    <gazebo reference="uwb_anchor_${id}_joint">
+      <preserveFixedJoint>true</preserveFixedJoint>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- Numbered anticlockwise from front-left, seen from above (+x is forward),
+       as on the TurtleBot 4. -->
+  <xacro:uwb_anchor id="1" x="${uwb_anchor_xy}"  y="${uwb_anchor_xy}"/>
+  <xacro:uwb_anchor id="2" x="${-uwb_anchor_xy}" y="${uwb_anchor_xy}"/>
+  <xacro:uwb_anchor id="3" x="${-uwb_anchor_xy}" y="${-uwb_anchor_xy}"/>
+  <xacro:uwb_anchor id="4" x="${uwb_anchor_xy}"  y="${-uwb_anchor_xy}"/>
+</robot>

@@ -9,7 +9,8 @@
 # keeps running until Ctrl+C, then prints who the robot was following
 # (scripts/follow_test.py).
 #
-#   ./scripts/demo_uwb_two_people.sh
+#   ./scripts/demo_uwb_two_people.sh                  # TIAGo
+#   ./scripts/demo_uwb_two_people.sh robot:=turtlebot4
 #
 # Opens Gazebo. Ctrl+C stops everything. Logs: log/demo_uwb_two_people/.
 # Builds the workspace first (./scripts/build.sh), so there is no separate build step.
@@ -29,7 +30,9 @@ DEMO_PIDS+=($!)
 
 # follow_test.py starts human2 when the target reaches (-3.5, 6.5), and on Ctrl+C
 # prints who the robot was following (it never ends the demo by itself here).
-python3 "$SCRIPTS/follow_test.py" --target-topic /uwb/person --timeout 100000 --end-x-below=-1e9 \
+# --robot: the robot's Gazebo model name, tiago or turtlebot4. (Bumps are only counted on
+# the TurtleBot 4, whose bumper publishes /hazard_detection.)
+python3 "$SCRIPTS/follow_test.py" --robot "$ROBOT" --target-topic /uwb/person --timeout 100000 --end-x-below=-1e9 \
     --start-cmd "'$SCRIPTS/launch_human_waypoints.sh' person:=human2 params_file:='$CONFIG/human2_crossing.yaml' > '$LOGS/human2_walk.log' 2>&1" \
     > "$LOGS/who_followed.txt" 2>&1 &
 WATCHER=$!

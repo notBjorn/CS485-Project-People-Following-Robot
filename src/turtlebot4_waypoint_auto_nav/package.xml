@@ -3,7 +3,7 @@
 <package format="3">
   <name>turtlebot4_waypoint_auto_nav</name>
   <version>0.0.0</version>
-  <description>Automated navigation setup for TurtleBot 4</description>
+  <description>Automated Nav2 navigation for the TIAGo or TurtleBot 4 (name kept from the TurtleBot 4 version)</description>
   <maintainer email="madalynnleehein@gmail.com">Madalynn Hein</maintainer>
   <license>Apache-2.0</license>
 

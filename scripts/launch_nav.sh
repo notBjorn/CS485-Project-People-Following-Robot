@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Simulation + AMCL localization + Nav2 on the saved map for the world.
-# Extra args pass through, e.g. world:=warehouse or map:=/path/to/map.yaml
+# Extra args pass through, e.g. world:=warehouse, robot:=turtlebot4 or map:=/path/to/map.yaml
 #
 # Also sets the initial pose to the spawn pose (x:=, y:=, yaw:=, default 0 0 0): Nav2 can't
 # finish starting without one and gives up after about a minute. To correct it later, use

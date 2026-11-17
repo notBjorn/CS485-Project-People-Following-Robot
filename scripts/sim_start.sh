@@ -9,10 +9,12 @@
 #   SIM_START_TIMEOUT  launch -> server's first line
 #   SIM_WORLD_TIMEOUT  server's first line -> world loaded. Long, because the first run
 #                      of a world can download models.
-#   SIM_ROBOT_TIMEOUT  world loaded -> robot's drive controller running
+#   SIM_ROBOT_TIMEOUT  world loaded -> robot's drive controller running (the TurtleBot 4's
+#                      diffdrive_controller or TIAGo's mobile_base_controller). Longer
+#                      than the TurtleBot 4 needs, because TIAGo starts more controllers.
 SIM_START_TIMEOUT=${SIM_START_TIMEOUT:-30}
 SIM_WORLD_TIMEOUT=${SIM_WORLD_TIMEOUT:-300}
-SIM_ROBOT_TIMEOUT=${SIM_ROBOT_TIMEOUT:-45}
+SIM_ROBOT_TIMEOUT=${SIM_ROBOT_TIMEOUT:-90}
 SIM_START_ATTEMPTS=3
 
 # True if any simulation process is still running.
@@ -44,7 +46,8 @@ start_sim() {
         SIM_PID=$!
         wait_for_log "$log" 'Gazebo Sim Server v' "$SIM_START_TIMEOUT" &&
             wait_for_log "$log" 'Serving world controls' "$SIM_WORLD_TIMEOUT" &&
-            wait_for_log "$log" 'Configured and activated diffdrive' "$SIM_ROBOT_TIMEOUT"
+            wait_for_log "$log" 'Configured and activated \(diffdrive\|mobile_base_controller\)' \
+                "$SIM_ROBOT_TIMEOUT"
         rc=$?
         [ "$rc" -eq 0 ] && return 0
         if [ "$rc" -eq 2 ]; then
