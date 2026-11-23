@@ -90,10 +90,18 @@ publishes
 /cmd_vel (geometry_msgs/TwistStamped) and the trail as /uwb/trail (nav_msgs/Path).
 The TurtleBot 4 must be undocked first (scripts/launch_follow.sh does it; TIAGo has no dock).
 
+Settings: every behaviour setting (SETTINGS, below) can be changed while it runs
+(ros2 param set, rqt_reconfigure), within its range and checked against the others
+(check_settings); frames, rate_hz and start_enabled are fixed at start-up.
+
 Starting and stopping (the trail keeps recording either way):
     start_enabled (parameter, default true): follow from the start, as before.
     /uwb_follower/enable  std_srvs/SetBool: true follows, false stops the robot and
         sends no more drive commands (so teleop can take over).
+    /uwb_follower/clear_trail  std_srvs/Trigger: drop the breadcrumb trail, so the robot
+        heads straight for the person (or where they were last reliably seen) and starts a
+        fresh trail; also lets it try again to get unstuck. For recovering from a trail
+        built from bad estimates, or after the robot was moved by hand.
     /uwb_follower/follow_person  people_follower_interfaces/action/FollowPerson: follow
         until cancelled or a limit in the goal is reached, with feedback on what the
         robot is doing; the robot stops when the goal ends. A new goal replaces the
@@ -107,6 +115,8 @@ import numpy as np
 from geometry_msgs.msg import PointStamped, PoseStamped, TwistStamped, Vector3Stamped
 from nav_msgs.msg import Path
 from people_follower_interfaces.action import FollowPerson
+from rcl_interfaces.msg import (FloatingPointRange, IntegerRange, ParameterDescriptor,
+                                SetParametersResult)
 import rclpy
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.task import Future
@@ -116,7 +126,7 @@ from rclpy.qos import qos_profile_sensor_data
 from rclpy.time import Time
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Float64
-from std_srvs.srv import SetBool
+from std_srvs.srv import SetBool, Trigger
 import tf2_ros
 
 
@@ -132,101 +142,105 @@ def clamp(value, low, high):
     return max(low, min(high, value))
 
 
+# Behaviour settings, all changeable while running (ros2 param set, rqt_reconfigure):
+# (parameter, attribute, default, lowest, highest, description). Defaults are the
+# TurtleBot 4's; uwb_follow.launch.py sets TIAGo's (robot radius, follow distance, speed).
+SETTINGS = [
+    ('follow_distance', '_follow_distance_param', 0.79, 0.3, 5.0,
+     "m behind the person (robot centre to the tag on their back) along the trail; "
+     "raised to at least robot_radius_m + person_stop_m"),
+    ('robot_radius_m', 'robot_radius', 0.18, 0.1, 0.6,
+     "m, the robot's round body (TurtleBot 4 0.18, TIAGo 0.27)"),
+    ('person_slow_m', 'person_slow', 1.83, 0.3, 5.0,
+     "m from the robot's edge: slow down nearer the person than this (6 ft)"),
+    ('person_stop_m', 'person_stop', 0.61, 0.2, 3.0,
+     "m from the robot's edge: no closer to the person than this (2 ft)"),
+    ('person_backup_m', 'person_backup', 0.45, 0.1, 2.0,
+     "m from the robot's edge: back away if the person comes this close (1.5 ft)"),
+    ('resume_margin_m', 'resume_margin', 0.15, 0.0, 1.0,
+     'm: after backing away, wait until the person is this much further off'),
+    ('slow_zone_m', 'slow_zone', 0.5, 0.0, 2.0, 'm of trail to creep over at the end'),
+    ('braking_m', 'braking', 0.5, 0.0, 2.0, 'm of trail to brake over before the slow zone'),
+    ('creep_speed', 'creep_speed', 0.08, 0.0, 0.5, 'm/s at the slow zones\' outer edges'),
+    ('breadcrumb_spacing', 'spacing', 0.25, 0.05, 1.0, 'm between trail points'),
+    ('lookahead_m', 'lookahead', 1.0, 0.3, 3.0,
+     'm along the trail to aim (further smooths the UWB wobble)'),
+    ('reached_m', 'reached', 0.3, 0.05, 1.0, 'm: trail points this close are done'),
+    ('max_linear', 'max_linear', 0.3, 0.0, 1.0,
+     'm/s top speed (TurtleBot 4 base ~0.31, TIAGo 1.0)'),
+    ('max_angular', 'max_angular', 1.2, 0.1, 2.0, 'rad/s top turning speed'),
+    ('max_accel', 'max_accel', 0.5, 0.1, 2.0, 'm/s^2 speeding up'),
+    ('max_decel', 'max_decel', 0.5, 0.1, 3.0,
+     'm/s^2 the base can brake at (speed is kept to what can stop in time)'),
+    ('k_linear', 'k_linear', 0.5, 0.0, 3.0, 'catch-up: m/s per m behind'),
+    ('k_angular', 'k_angular', 1.5, 0.0, 5.0, 'steering: rad/s per rad off'),
+    ('turn_in_place_rad', 'turn_in_place', 1.2, 0.2, 3.14,
+     'rad off the target beyond which it turns on the spot'),
+    ('obstacle_stop_m', 'obstacle_stop', 0.2, 0.05, 1.0,
+     "m from the robot's front edge: stop for objects in its path"),
+    ('obstacle_slow_m', 'obstacle_slow', 0.6, 0.1, 3.0,
+     "m from the robot's front edge: slow for objects in its path (2 ft)"),
+    ('obstacle_side_margin_m', 'side_margin', 0.05, 0.0, 0.3,
+     "m: the robot's path is its width plus this each side"),
+    ('latency_s', 'latency', 0.1, 0.0, 0.5, 's command-to-wheels delay allowance'),
+    ('backup_speed', 'backup_speed', 0.15, 0.0, 0.3, 'm/s top reversing speed'),
+    ('blind_backup_m', 'blind_backup', 0.5, 0.0, 2.0,
+     "m: most it reverses when the LiDAR can't see behind"),
+    ('yield_speed_mps', 'yield_speed', 0.15, 0.05, 1.0,
+     'm/s: step aside from a person walking at least this fast towards it'),
+    ('yield_ahead_m', 'yield_ahead', 3.0, 0.5, 6.0, '... with the robot this far ahead of them'),
+    ('yield_lateral_m', 'yield_lateral', 0.8, 0.3, 2.0,
+     '... and this close to their line; and step this far to the side'),
+    ('yield_max_m', 'yield_max', 1.5, 0.3, 4.0, 'm: most it drives to step aside'),
+    ('yield_timeout_s', 'yield_timeout', 12.0, 1.0, 60.0, 's: most it spends stepping aside'),
+    ('yield_confirm_s', 'yield_confirm', 0.6, 0.0, 3.0,
+     's they must be heading at it before it steps aside'),
+    ('stuck_after_s', 'stuck_after', 2.0, 0.5, 3600.0, 's blocked before getting unstuck'),
+    ('stuck_backup_m', 'stuck_backup', 0.3, 0.0, 1.0, 'm to back up to get unstuck'),
+    ('stuck_attempts', 'stuck_attempts', 3, 0, 10, 'tries to get unstuck before waiting'),
+    ('stuck_progress_m', 'stuck_progress', 1.0, 0.1, 5.0,
+     'm from where it got stuck that resets the tries'),
+    ('lost_after_s', 'lost_after', 0.5, 0.1, 5.0, 's without an estimate before it is lost'),
+    ('lost_speed_mps', 'lost_speed', 0.4, 0.0, 1.0,
+     "m/s going to where the person was last seen"),
+    ('max_uncertainty_m', 'max_uncertainty', 0.4, 0.05, 5.0,
+     'm: ignore UWB estimates more uncertain than this ...'),
+    ('reliable_uncertainty_m', 'reliable_uncertainty', 0.3, 0.05, 5.0,
+     '... until they are better than this again'),
+]
+
+
 class UwbFollower(Node):
 
     def __init__(self):
         super().__init__('uwb_follower')
-        self.declare_parameter('base_frame', 'base_link')
-        self.declare_parameter('odom_frame', 'odom')
-        # m behind the person (centre to the tag on their back), along the trail; at least
-        # robot_radius_m + person_stop_m
-        self.declare_parameter('follow_distance', 0.79)
-        self.declare_parameter('robot_radius_m', 0.18)       # TurtleBot 4; TIAGo 0.27
-        self.declare_parameter('person_slow_m', 1.83)        # 6 ft from the robot's edge
-        self.declare_parameter('person_stop_m', 0.61)        # 2 ft from the robot's edge
-        self.declare_parameter('slow_zone_m', 0.5)           # creep over this last stretch
-        self.declare_parameter('braking_m', 0.5)             # and brake over this before it
-        self.declare_parameter('creep_speed', 0.08)          # m/s at the slow zone's outer edge
-        self.declare_parameter('breadcrumb_spacing', 0.25)   # m between trail points
-        # Aim this far along the trail: further smooths out the wobble of the UWB estimate
-        self.declare_parameter('lookahead_m', 1.0)
-        self.declare_parameter('reached_m', 0.3)             # trail points this close are done
-        self.declare_parameter('max_linear', 0.3)            # m/s (TurtleBot 4 top speed ~0.31)
-        self.declare_parameter('max_angular', 1.2)           # rad/s
-        self.declare_parameter('max_accel', 0.5)             # m/s^2
-        self.declare_parameter('max_decel', 0.5)             # m/s^2 the base can brake at
-        self.declare_parameter('k_linear', 0.5)              # catch-up: m/s per m behind
-        self.declare_parameter('k_angular', 1.5)
-        # Turn on the spot only beyond this; below it, drive and turn (slower the further off)
-        self.declare_parameter('turn_in_place_rad', 1.2)
-        self.declare_parameter('obstacle_stop_m', 0.2)       # from the robot's front edge
-        self.declare_parameter('obstacle_slow_m', 0.6)       # 2 ft: slow for objects within
-        self.declare_parameter('person_backup_m', 0.45)      # 1.5 ft: back away from the person
-        self.declare_parameter('backup_speed', 0.15)         # m/s, top reversing speed
-        self.declare_parameter('blind_backup_m', 0.5)        # reversing limit with no rear view
-        self.declare_parameter('resume_margin_m', 0.15)      # after backing: wait for this more
-        self.declare_parameter('latency_s', 0.1)             # command-to-wheels delay allowance
-        self.declare_parameter('obstacle_side_margin_m', 0.05)  # path corridor: body + this
-        self.declare_parameter('yield_speed_mps', 0.15)      # person walking at least this fast
-        self.declare_parameter('yield_ahead_m', 3.0)         # ... with the robot this far ahead
-        self.declare_parameter('yield_lateral_m', 0.8)       # ... and this close to their line
-        self.declare_parameter('yield_max_m', 1.5)           # most it drives to step aside
-        self.declare_parameter('yield_timeout_s', 12.0)      # most it spends stepping aside
-        self.declare_parameter('yield_confirm_s', 0.6)       # heading at it this long first
-        self.declare_parameter('stuck_after_s', 2.0)         # blocked this long: get unstuck
-        self.declare_parameter('stuck_backup_m', 0.3)        # by backing up this far first
-        self.declare_parameter('stuck_attempts', 3)          # tries before giving up
-        self.declare_parameter('stuck_progress_m', 1.0)      # forward driving that resets tries
-        self.declare_parameter('lost_after_s', 0.5)
-        self.declare_parameter('lost_speed_mps', 0.4)        # going to their last position
-        self.declare_parameter('max_uncertainty_m', 0.4)     # estimates worse: ignored ...
-        self.declare_parameter('reliable_uncertainty_m', 0.3)  # ... until better than this
-        self.declare_parameter('rate_hz', 20.0)
-        self.declare_parameter('start_enabled', True)   # false: wait for enable / an action
+        # Wiring, fixed at start-up (read-only: setting one later is refused).
+        fixed = ParameterDescriptor(read_only=True)
+        self.declare_parameter('base_frame', 'base_link', fixed)
+        self.declare_parameter('odom_frame', 'odom', fixed)
+        self.declare_parameter('rate_hz', 20.0, fixed)
+        # false: wait for ~/enable or a FollowPerson goal (use ~/enable once running)
+        self.declare_parameter('start_enabled', True, fixed)
+        # Behaviour: all live, checked against each other (see check_settings).
+        for name, _, default, low, high, about in SETTINGS:
+            if isinstance(default, int):
+                limits = {'integer_range': [IntegerRange(from_value=low, to_value=high, step=1)]}
+            else:
+                limits = {'floating_point_range': [
+                    FloatingPointRange(from_value=low, to_value=high, step=0.0)]}
+            self.declare_parameter(name, default,
+                                   ParameterDescriptor(description=about, **limits))
+        problem = self.settings_problem({})
+        if problem:
+            self.get_logger().warn(f'Settings: {problem}')
+        self.goal = None
+        self.apply_settings()
+        self.add_on_set_parameters_callback(self.check_settings)
+        self.add_post_set_parameters_callback(self.settings_changed)
 
         p = lambda name: self.get_parameter(name).value  # noqa: E731
         self.base_frame = p('base_frame')
         self.odom_frame = p('odom_frame')
-        self.robot_radius = p('robot_radius_m')
-        self.person_slow = p('person_slow_m')
-        self.person_stop = p('person_stop_m')
-        self.default_follow_distance = self.safe_follow_distance(p('follow_distance'))
-        self.follow_distance = self.default_follow_distance
-        self.slow_zone = p('slow_zone_m')
-        self.braking = p('braking_m')
-        self.creep_speed = p('creep_speed')
-        self.spacing = p('breadcrumb_spacing')
-        self.lookahead = p('lookahead_m')
-        self.reached = p('reached_m')
-        self.max_linear = p('max_linear')
-        self.max_angular = p('max_angular')
-        self.max_accel = p('max_accel')
-        self.max_decel = p('max_decel')
-        self.k_linear = p('k_linear')
-        self.k_angular = p('k_angular')
-        self.turn_in_place = p('turn_in_place_rad')
-        self.obstacle_stop = p('obstacle_stop_m')
-        self.obstacle_slow = p('obstacle_slow_m')
-        self.person_backup = p('person_backup_m')
-        self.backup_speed = p('backup_speed')
-        self.blind_backup = p('blind_backup_m')
-        self.resume_margin = p('resume_margin_m')
-        self.latency = p('latency_s')
-        self.corridor = self.robot_radius + p('obstacle_side_margin_m')
-        self.yield_speed = p('yield_speed_mps')
-        self.yield_ahead = p('yield_ahead_m')
-        self.yield_lateral = p('yield_lateral_m')
-        self.yield_max = p('yield_max_m')
-        self.yield_timeout = p('yield_timeout_s')
-        self.yield_confirm = p('yield_confirm_s')
-        self.stuck_after = p('stuck_after_s')
-        self.stuck_backup = p('stuck_backup_m')
-        self.stuck_attempts = p('stuck_attempts')
-        self.stuck_progress = p('stuck_progress_m')
-        self.lost_after = p('lost_after_s')
-        self.lost_speed = p('lost_speed_mps')
-        self.max_uncertainty = p('max_uncertainty_m')
-        self.reliable_uncertainty = p('reliable_uncertainty_m')
         self.reliable = True         # whether the localizer's estimates are trusted
         self.uncertainty_seen = False  # the localizer publishes /uwb/person_uncertainty
         self.pending = None          # (position, velocity) waiting for its uncertainty
@@ -282,6 +296,7 @@ class UwbFollower(Node):
         self.trail_pub = self.create_publisher(Path, '/uwb/trail', 10)
         self.create_timer(self.period, self.step)
         self.create_service(SetBool, '~/enable', self.on_enable)
+        self.create_service(Trigger, '~/clear_trail', self.on_clear_trail)
         self.action_server = ActionServer(
             self, FollowPerson, '~/follow_person', execute_callback=self.execute,
             goal_callback=lambda goal: GoalResponse.ACCEPT,
@@ -293,6 +308,52 @@ class UwbFollower(Node):
             f'stopping at {self.person_stop:g} m (from the robot\'s edge)'
             + ('' if self.enabled else
                ' (waiting: call ~/enable or send a FollowPerson goal to start)'))
+
+    # --- live settings ---------------------------------------------------------------
+
+    def apply_settings(self):
+        """Copy the settings into the node, and work out what depends on them."""
+        for name, attr, *_ in SETTINGS:
+            setattr(self, attr, self.get_parameter(name).value)
+        self.corridor = self.robot_radius + self.side_margin
+        self.default_follow_distance = self.safe_follow_distance(
+            self.get_parameter('follow_distance').value)
+        if self.goal is None:
+            self.follow_distance = self.default_follow_distance
+        else:   # a FollowPerson goal's own distance stays, still at least 2 ft away
+            self.follow_distance = max(self.follow_distance,
+                                       self.robot_radius + self.person_stop)
+
+    def settings_problem(self, changes):
+        """Why these settings don't fit together (None if they do), with `changes` (name ->
+        value) applied over the current ones."""
+        v = {name: self.get_parameter(name).value for name, *_ in SETTINGS}
+        v.update(changes)
+        rules = [
+            (v['person_stop_m'] < v['person_slow_m'], 'person_stop_m must be below person_slow_m'),
+            (v['person_backup_m'] < v['person_stop_m'],
+             'person_backup_m must be below person_stop_m'),
+            (v['obstacle_stop_m'] < v['obstacle_slow_m'],
+             'obstacle_stop_m must be below obstacle_slow_m'),
+            (v['reliable_uncertainty_m'] <= v['max_uncertainty_m'],
+             'reliable_uncertainty_m must not be above max_uncertainty_m'),
+            (v['creep_speed'] <= v['max_linear'], 'creep_speed must not be above max_linear'),
+            (v['reached_m'] < v['lookahead_m'], 'reached_m must be below lookahead_m'),
+        ]
+        broken = [why for ok, why in rules if not ok]
+        return '; '.join(broken) if broken else None
+
+    def check_settings(self, params):
+        """Refuse a change that leaves the settings not fitting together."""
+        problem = self.settings_problem({q.name: q.value for q in params
+                                         if any(q.name == s[0] for s in SETTINGS)})
+        return SetParametersResult(successful=problem is None, reason=problem or '')
+
+    def settings_changed(self, params):
+        self.apply_settings()
+        self.get_logger().info('Settings changed: ' + ', '.join(
+            f'{q.name} = {q.value:g}' if isinstance(q.value, (int, float))
+            else f'{q.name} = {q.value}' for q in params))
 
     def now_s(self):
         return self.get_clock().now().nanoseconds * 1e-9
@@ -463,6 +524,19 @@ class UwbFollower(Node):
         response.success = True
         response.message = (f"{'Enabled' if request.data else 'Disabled'}"
                             + (' (no change)' if was == request.data else ''))
+        return response
+
+    def on_clear_trail(self, request, response):
+        dropped = len(self.trail)
+        self.trail = []
+        self.unstick_from = self.stuck_at = self.blocked_since = None
+        self.unstick_tries = 0
+        self.publish_trail()
+        response.success = True
+        response.message = (f'Cleared {dropped} trail point(s); heading straight for the '
+                            'person' + (' (where they were last reliably seen)'
+                                        if self.lost else ''))
+        self.get_logger().info(f'clear_trail: {response.message}')
         return response
 
     # --- FollowPerson action -------------------------------------------------------

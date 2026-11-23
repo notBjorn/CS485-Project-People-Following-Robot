@@ -177,6 +177,12 @@ SERVICES AND ACTIONS (in another terminal, after source scripts/env.sh)
                              the follower sends no drive commands, so teleop works
      ros2 service call /uwb_follower/enable std_srvs/srv/SetBool "{data: false}"
 
+  /uwb_follower/clear_trail  (std_srvs/Trigger)  drop the breadcrumb trail: the robot
+                             heads straight for the person and starts a fresh trail
+                             (after bad through-wall estimates, or after moving the
+                             robot by hand); it also gets to try again if it was stuck
+     ros2 service call /uwb_follower/clear_trail std_srvs/srv/Trigger
+
   /uwb_follower/follow_person  (people_follower_interfaces/action/FollowPerson)
                              follow until cancelled (Ctrl+C) or a limit; the robot
                              stops when it ends. Feedback: state, distance, speeds.
@@ -194,6 +200,20 @@ SERVICES AND ACTIONS (in another terminal, after source scripts/env.sh)
      ros2 run people_follower auto_explorer --ros-args -p use_sim_time:=true -p auto_start:=false
      ros2 action send_goal --feedback /auto_explorer/explore_map \
          people_follower_interfaces/action/ExploreMap "{max_duration_s: 600.0}"
+
+  TUNING THE FOLLOWER WHILE IT RUNS
+  Every behaviour setting of uwb_follower (speeds, the 6 ft / 2 ft distances, object
+  slow/stop distances, stepping aside, getting unstuck, UWB trust) can be changed live;
+  it takes effect at the next 20 Hz cycle. Values must be decimals (1.0, not 1), within
+  each setting's range, and fit together (e.g. person_stop_m below person_slow_m);
+  otherwise the change is refused with the reason. Frames, rate_hz and start_enabled
+  are fixed at start-up.
+     ros2 param list /uwb_follower
+     ros2 param describe /uwb_follower obstacle_slow_m     # what it does, its range
+     ros2 param set /uwb_follower max_linear 0.5
+     ros2 run rqt_reconfigure rqt_reconfigure              # sliders for all of them
+     ros2 param dump /uwb_follower > my_tuning.yaml        # save what you settled on
+  To keep values, put them in uwb_follow.launch.py (or load the dumped file).
 
   auto_map.sh still runs auto_explorer the old way (auto_start:=true: explore
   straight away, exit 0 = complete, 2 = partial).
