@@ -1,0 +1,54 @@
+# Waypoints for the person in simple_colored_warehouse: one lap that goes around
+# the coloured box in each room (scripts/launch_human_waypoints.sh):
+#   ./scripts/launch_sim.sh world:=simple_colored_warehouse
+#   ./scripts/launch_human_waypoints.sh warehouse_boxes
+#
+# Rooms connect only through the north door (x = 0, y = 6..8), the south door
+# (x = 0, y = -8..-6) and the centre gap (y = 0, x = -2..2).
+#
+# Blue (NE) and green (SW): a low box (blocker_tr / blocker_bl) runs into the
+# coloured box's corner, leaving only 20 cm, so the person circles the two
+# together. Red (NW) and yellow (SE) have room all round and are circled alone.
+#
+#            NW  red                          NE  blue + blocker_tr
+#   (-12,9.5)<---(-8,9.5)          (3.5,9.9)<-------------(12,9.9)
+#      |   [red]     ^  \            |      [===][blue]       ^
+#   (-12,6.5)----->(-3.5,6.5) (0,7)<(2,7)  (3.5,6.5)-------->(12,6.5)
+#                     |                       ^
+#              (-3.5,1.5)->(-1,1.5)    (1,1.5)->(2.5,1.5) start
+#                            |              ^
+#              (-3.5,-1.5)<-(-1,-1.5)  (1,-1.5)<-(3.5,-1.5)
+#                     |                              ^
+#   (-12,-6.5)<----(-3.5,-6.5)           (3.5,-6.5)<-----(12,-6.5)
+#      |  [===][green]              (0,-7)->(8,-9.5)    [yellow] ^
+#   (-12,-9.9)----->(-3.5,-9.9)->(-2,-7)        \----->(12,-9.5)
+#            SW  green + blocker_bl                SE  yellow
+#
+# Every edge is at least 0.9 m from the nearest wall or box. The lap is 134 m:
+# about 8 min at 0.3 m/s including the pauses, ending back where it started.
+human_waypoints:
+  ros__parameters:
+    # x, y pairs in the world frame (metres), visited in order.
+    waypoints: [
+       3.5,  6.5,   12.0,  6.5,   # NE: below the blue box,
+      12.0,  9.9,    3.5,  9.9,   #     round its east end and back above blocker_tr
+       2.0,  7.0,    0.0,  7.0,   # line up with the north door and go through
+      -8.0,  9.5,  -12.0,  9.5,   # NW: above the red box,
+     -12.0,  6.5,   -3.5,  6.5,   #     round its west end and back below it
+      -3.5,  1.5,   -1.0,  1.5,   # down to the centre gap
+      -1.0, -1.5,   -3.5, -1.5,   # through it into the SW room
+      -3.5, -6.5,  -12.0, -6.5,   # SW: above the green box,
+     -12.0, -9.9,   -3.5, -9.9,   #     round its west end and back below blocker_bl
+      -2.0, -7.0,    0.0, -7.0,   # line up with the south door and go through
+       8.0, -9.5,   12.0, -9.5,   # SE: below the yellow box,
+      12.0, -6.5,    3.5, -6.5,   #     round its east end and back above it
+       3.5, -1.5,    1.0, -1.5,   # to the centre gap
+       1.0,  1.5,    2.5,  1.5,   # through it, back to where the person started
+    ]
+    # m/s. About the TurtleBot 4's top speed (0.31 m/s): while following, the robot
+    # loses ground at every turn. Use 0.2 for the robot to keep up.
+    speed: 0.3
+    max_turn_rate: 1.0  # rad/s
+    tolerance: 0.2      # m; how close counts as reaching a waypoint
+    loop: false         # true: start over after the last waypoint
+    pause: 1.0          # s to stand still at each waypoint

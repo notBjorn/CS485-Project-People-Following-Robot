@@ -1,0 +1,22 @@
+# Explore and map the world (served by auto_explorer on /auto_explorer/explore_map when
+# it runs with auto_start:=false). Succeeds when no unexplored edges are left; aborts
+# with complete false when the only edges left are ones Nav2 couldn't reach, or at the
+# time limit. Either way the map so far is still in SLAM, ready to save.
+
+# Goal
+float32 max_duration_s    # give up after this long; 0 = the node's max_duration_s
+---
+# Result
+bool complete             # true: no unexplored edges left
+uint32 frontiers_visited
+uint32 unreachable_frontiers
+float32 duration_s
+string message
+---
+# Feedback
+uint32 frontiers_left     # reachable unexplored edges in the current map
+uint32 frontiers_visited
+uint32 unreachable_frontiers
+float32 elapsed_s
+bool has_goal             # whether Nav2 is driving to current_goal
+geometry_msgs/Point current_goal  # in the map frame

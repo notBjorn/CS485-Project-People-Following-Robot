@@ -1,0 +1,343 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <!-- TurtleBot 4 house world for ROS 2 Jazzy / Gazebo Harmonic. Self-contained: primitives only.
+       House interior 10 x 8 m: living (SW), dining (SE), bedroom (NW), bathroom (NE).
+       House is offset so the world origin (default robot spawn) is open living-room floor.
+       CS485 changes (copy of turtlebot4_house.sdf from main, by MadsHein):
+       - Added the UWB plugin and a person wearing UWB tag 1 (the robots carry anchors 1-4),
+         as in simple_colored_warehouse.sdf, for demo_uwb_house.sh.
+       - Door thresholds removed: TIAGo can't climb them (2.5 cm, 8.5 degree ramps), and
+         as modelled they ran along the walking direction, so the person met a bare
+         2.5 cm step. The doorways are flat.
+       - Collisions renamed <name>_collision: they shared names with their visuals, which
+         the SDF checker (gz sdf -k) rejects.
+       The whole house is one link made only of boxes, which the UWB plugin checks box by
+       box, so walls and furniture block the signal only where they really are. -->
+  <world name="turtlebot4_house">
+    <physics name="default_physics" type="ignored">
+      <max_step_size>0.003</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+    <plugin filename="gz-sim-contact-system" name="gz::sim::systems::Contact"/>
+
+<!-- UWB ranging (src/uwb_gazebo_plugin, from UWBPX4Sim), "lps_twr" preset: Bitcraze
+     Loco Positioning (DWM1000) in two-way ranging mode. Publishes the distance from
+     every anchor I to every tag J on /uwb_gz_simulator/distances/aItJ (gz.msgs.Double,
+     centimetres) and the true distance on /uwb_gz_simulator/distances_ground_truth/aItJ.
+     Tags and anchors are links named uwb_tag_<id> / uwb_anchor_<id>.
+     Regenerate with: python3 src/uwb_gazebo_plugin/preset_to_sdf.py lps_twr -->
+<plugin filename="libUWBGazeboPlugin.so" name="custom::UWBGazeboSystem">
+  <uwb_mode>twr</uwb_mode>
+  <topic>/uwb_gz_simulator/distances</topic>
+  <ground_truth_topic>/uwb_gz_simulator/distances_ground_truth</ground_truth_topic>
+  <tdoa_topic>/uwb_gz_simulator/tdoa</tdoa_topic>
+  <tdoa_ground_truth_topic>/uwb_gz_simulator/tdoa_ground_truth</tdoa_ground_truth_topic>
+  <update_rate_hz>30.0</update_rate_hz>
+  <path_loss_exponent>2.0</path_loss_exponent>
+  <max_link_loss_db>37.5</max_link_loss_db>
+  <noise_start_loss_db>23.5</noise_start_loss_db>
+  <noise_end_loss_db>37.5</noise_end_loss_db>
+  <dropout_center_loss_db>35.5</dropout_center_loss_db>
+  <dropout_width_db>1.4</dropout_width_db>
+  <min_noise_stddev_cm>8.3</min_noise_stddev_cm>
+  <max_noise_stddev_cm>50.0</max_noise_stddev_cm>
+  <min_dropout_probability>0.02</min_dropout_probability>
+  <enable_nlos_dropout>false</enable_nlos_dropout>
+  <nlos_endpoint_margin_m>0.02</nlos_endpoint_margin_m>
+  <nlos_min_loss_db>3.0</nlos_min_loss_db>
+  <body_shadow_max_loss_db>10.0</body_shadow_max_loss_db>
+  <enable_material_attenuation>true</enable_material_attenuation>
+  <carrier_frequency_ghz>4.0</carrier_frequency_ghz>
+  <material_metal_detour_loss_db>20.0</material_metal_detour_loss_db>
+  <enable_dielectric_delay>false</enable_dielectric_delay>
+  <moving_outlier_probability>0.35</moving_outlier_probability>
+  <moving_outlier_mean_cm>14.7</moving_outlier_mean_cm>
+  <moving_outlier_min_speed_mps>0.002</moving_outlier_min_speed_mps>
+  <power_bias_cm_per_db>0.99</power_bias_cm_per_db>
+  <power_bias_ref_loss_db>16.6</power_bias_ref_loss_db>
+  <gaussian_noise_mean_cm>0.0</gaussian_noise_mean_cm>
+  <apply_pair_bias>true</apply_pair_bias>
+  <bias_min_cm>-34.4</bias_min_cm>
+  <bias_max_cm>-10.5</bias_max_cm>
+</plugin>
+
+    <gravity>0 0 -9.8</gravity>
+    <scene>
+      <ambient>0.6 0.6 0.6 1</ambient>
+      <background>0.75 0.8 0.85 1</background>
+      <shadows>true</shadows>
+    </scene>
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.4 0.3 -0.9</direction>
+    </light>
+
+    <model name="turtlebot4_house">
+      <static>true</static>
+      <pose>3.6 2.0 0 0 0 0</pose>
+      <link name="house">
+      <visual name="bed_blanket"><pose>-0.5000 2.6750 0.5150 0 0 0</pose><geometry><box><size>1.6000 1.3500 0.0300</size></box></geometry><material><ambient>0.250 0.350 0.550 1</ambient><diffuse>0.250 0.350 0.550 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="bed_frame"><pose>-0.5000 2.9700 0.1500 0 0 0</pose><geometry><box><size>1.6000 1.9400 0.3000</size></box></geometry><material><ambient>0.300 0.180 0.100 1</ambient><diffuse>0.300 0.180 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="bed_headboard"><pose>-0.5000 3.9700 0.5000 0 0 0</pose><geometry><box><size>1.6000 0.0600 1.0000</size></box></geometry><material><ambient>0.300 0.180 0.100 1</ambient><diffuse>0.300 0.180 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="bed_mattress"><pose>-0.5000 2.9700 0.4000 0 0 0</pose><geometry><box><size>1.5600 1.9000 0.2000</size></box></geometry><material><ambient>0.900 0.900 0.950 1</ambient><diffuse>0.900 0.900 0.950 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="bed_pillow_l"><pose>-0.8750 3.6500 0.5600 0 0 0</pose><geometry><box><size>0.6500 0.4000 0.1200</size></box></geometry><material><ambient>0.970 0.970 0.970 1</ambient><diffuse>0.970 0.970 0.970 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="bed_pillow_r"><pose>-0.1250 3.6500 0.5600 0 0 0</pose><geometry><box><size>0.6500 0.4000 0.1200</size></box></geometry><material><ambient>0.970 0.970 0.970 1</ambient><diffuse>0.970 0.970 0.970 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_e_back"><pose>3.8000 -2.0000 0.6750 0 0 0</pose><geometry><box><size>0.0400 0.4400 0.4500</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_e_leg0"><pose>3.4000 -2.2000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_e_leg1"><pose>3.8000 -2.2000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_e_leg2"><pose>3.4000 -1.8000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_e_leg3"><pose>3.8000 -1.8000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_e_seat"><pose>3.6000 -2.0000 0.4300 0 0 0</pose><geometry><box><size>0.4400 0.4400 0.0400</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_n1_back"><pose>2.1000 -1.0500 0.6750 0 0 0</pose><geometry><box><size>0.4400 0.0400 0.4500</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_n1_leg0"><pose>1.9000 -1.4500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_n1_leg1"><pose>2.3000 -1.4500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_n1_leg2"><pose>1.9000 -1.0500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_n1_leg3"><pose>2.3000 -1.0500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_n1_seat"><pose>2.1000 -1.2500 0.4300 0 0 0</pose><geometry><box><size>0.4400 0.4400 0.0400</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_n2_back"><pose>2.9000 -1.0500 0.6750 0 0 0</pose><geometry><box><size>0.4400 0.0400 0.4500</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_n2_leg0"><pose>2.7000 -1.4500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_n2_leg1"><pose>3.1000 -1.4500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_n2_leg2"><pose>2.7000 -1.0500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_n2_leg3"><pose>3.1000 -1.0500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_n2_seat"><pose>2.9000 -1.2500 0.4300 0 0 0</pose><geometry><box><size>0.4400 0.4400 0.0400</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_s1_back"><pose>2.1000 -2.9500 0.6750 0 0 0</pose><geometry><box><size>0.4400 0.0400 0.4500</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_s1_leg0"><pose>1.9000 -2.9500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_s1_leg1"><pose>2.3000 -2.9500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_s1_leg2"><pose>1.9000 -2.5500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_s1_leg3"><pose>2.3000 -2.5500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_s1_seat"><pose>2.1000 -2.7500 0.4300 0 0 0</pose><geometry><box><size>0.4400 0.4400 0.0400</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_s2_back"><pose>2.9000 -2.9500 0.6750 0 0 0</pose><geometry><box><size>0.4400 0.0400 0.4500</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_s2_leg0"><pose>2.7000 -2.9500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_s2_leg1"><pose>3.1000 -2.9500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_s2_leg2"><pose>2.7000 -2.5500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_s2_leg3"><pose>3.1000 -2.5500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_s2_seat"><pose>2.9000 -2.7500 0.4300 0 0 0</pose><geometry><box><size>0.4400 0.4400 0.0400</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_w_back"><pose>1.2000 -2.0000 0.6750 0 0 0</pose><geometry><box><size>0.0400 0.4400 0.4500</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_w_leg0"><pose>1.2000 -2.2000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_w_leg1"><pose>1.6000 -2.2000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_w_leg2"><pose>1.2000 -1.8000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_w_leg3"><pose>1.6000 -1.8000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="chair_w_seat"><pose>1.4000 -2.0000 0.4300 0 0 0</pose><geometry><box><size>0.4400 0.4400 0.0400</size></box></geometry><material><ambient>0.250 0.150 0.080 1</ambient><diffuse>0.250 0.150 0.080 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="couch_arm_n"><pose>-2.2500 -1.0900 0.4700 0 0 0</pose><geometry><box><size>0.7000 0.1800 0.3000</size></box></geometry><material><ambient>0.350 0.420 0.380 1</ambient><diffuse>0.350 0.420 0.380 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="couch_arm_s"><pose>-2.2500 -2.9100 0.4700 0 0 0</pose><geometry><box><size>0.7000 0.1800 0.3000</size></box></geometry><material><ambient>0.350 0.420 0.380 1</ambient><diffuse>0.350 0.420 0.380 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="couch_back"><pose>-1.8000 -2.0000 0.5850 0 0 0</pose><geometry><box><size>0.2000 2.0000 0.5300</size></box></geometry><material><ambient>0.350 0.420 0.380 1</ambient><diffuse>0.350 0.420 0.380 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="couch_backcushion0"><pose>-1.9600 -2.5467 0.6250 0 0 0</pose><geometry><box><size>0.1200 0.5267 0.3500</size></box></geometry><material><ambient>0.420 0.500 0.450 1</ambient><diffuse>0.420 0.500 0.450 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="couch_backcushion1"><pose>-1.9600 -2.0000 0.6250 0 0 0</pose><geometry><box><size>0.1200 0.5267 0.3500</size></box></geometry><material><ambient>0.420 0.500 0.450 1</ambient><diffuse>0.420 0.500 0.450 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="couch_backcushion2"><pose>-1.9600 -1.4533 0.6250 0 0 0</pose><geometry><box><size>0.1200 0.5267 0.3500</size></box></geometry><material><ambient>0.420 0.500 0.450 1</ambient><diffuse>0.420 0.500 0.450 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="couch_base"><pose>-2.1500 -2.0000 0.1850 0 0 0</pose><geometry><box><size>0.9000 2.0000 0.2700</size></box></geometry><material><ambient>0.350 0.420 0.380 1</ambient><diffuse>0.350 0.420 0.380 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="couch_cushion0"><pose>-2.2400 -2.5467 0.3850 0 0 0</pose><geometry><box><size>0.6800 0.5267 0.1300</size></box></geometry><material><ambient>0.420 0.500 0.450 1</ambient><diffuse>0.420 0.500 0.450 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="couch_cushion1"><pose>-2.2400 -2.0000 0.3850 0 0 0</pose><geometry><box><size>0.6800 0.5267 0.1300</size></box></geometry><material><ambient>0.420 0.500 0.450 1</ambient><diffuse>0.420 0.500 0.450 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="couch_cushion2"><pose>-2.2400 -1.4533 0.3850 0 0 0</pose><geometry><box><size>0.6800 0.5267 0.1300</size></box></geometry><material><ambient>0.420 0.500 0.450 1</ambient><diffuse>0.420 0.500 0.450 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="couch_foot0"><pose>-2.5500 -2.9500 0.0250 0 0 0</pose><geometry><box><size>0.0600 0.0600 0.0500</size></box></geometry><material><ambient>0.300 0.180 0.100 1</ambient><diffuse>0.300 0.180 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="couch_foot1"><pose>-1.7500 -2.9500 0.0250 0 0 0</pose><geometry><box><size>0.0600 0.0600 0.0500</size></box></geometry><material><ambient>0.300 0.180 0.100 1</ambient><diffuse>0.300 0.180 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="couch_foot2"><pose>-2.5500 -1.0500 0.0250 0 0 0</pose><geometry><box><size>0.0600 0.0600 0.0500</size></box></geometry><material><ambient>0.300 0.180 0.100 1</ambient><diffuse>0.300 0.180 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="couch_foot3"><pose>-1.7500 -1.0500 0.0250 0 0 0</pose><geometry><box><size>0.0600 0.0600 0.0500</size></box></geometry><material><ambient>0.300 0.180 0.100 1</ambient><diffuse>0.300 0.180 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="cup_glass"><pose>0.5200 3.7400 0.6050 0 0 0</pose><geometry><cylinder><radius>0.0400</radius><length>0.1100</length></cylinder></geometry><material><ambient>0.850 0.920 0.950 1</ambient><diffuse>0.850 0.920 0.950 1</diffuse><specular>0.1 0.1 0.1 1</specular></material><transparency>0.75</transparency></visual>
+      <visual name="cup_water"><pose>0.5200 3.7400 0.5920 0 0 0</pose><geometry><cylinder><radius>0.0355</radius><length>0.0760</length></cylinder></geometry><material><ambient>0.550 0.750 0.950 1</ambient><diffuse>0.550 0.750 0.950 1</diffuse><specular>0.1 0.1 0.1 1</specular></material><transparency>0.50</transparency></visual>
+      <visual name="dresser_body"><pose>-4.7500 2.5000 0.4100 0 0 0</pose><geometry><box><size>0.5000 1.2000 0.8200</size></box></geometry><material><ambient>0.300 0.180 0.100 1</ambient><diffuse>0.300 0.180 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="dresser_drawer0"><pose>-4.4950 2.2100 0.1900 0 0 0</pose><geometry><box><size>0.0100 0.5600 0.2200</size></box></geometry><material><ambient>0.350 0.200 0.100 1</ambient><diffuse>0.350 0.200 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="dresser_drawer1"><pose>-4.4950 2.7900 0.1900 0 0 0</pose><geometry><box><size>0.0100 0.5600 0.2200</size></box></geometry><material><ambient>0.350 0.200 0.100 1</ambient><diffuse>0.350 0.200 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="dresser_drawer2"><pose>-4.4950 2.2100 0.4300 0 0 0</pose><geometry><box><size>0.0100 0.5600 0.2200</size></box></geometry><material><ambient>0.350 0.200 0.100 1</ambient><diffuse>0.350 0.200 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="dresser_drawer3"><pose>-4.4950 2.7900 0.4300 0 0 0</pose><geometry><box><size>0.0100 0.5600 0.2200</size></box></geometry><material><ambient>0.350 0.200 0.100 1</ambient><diffuse>0.350 0.200 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="dresser_drawer4"><pose>-4.4950 2.2100 0.6700 0 0 0</pose><geometry><box><size>0.0100 0.5600 0.2200</size></box></geometry><material><ambient>0.350 0.200 0.100 1</ambient><diffuse>0.350 0.200 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="dresser_drawer5"><pose>-4.4950 2.7900 0.6700 0 0 0</pose><geometry><box><size>0.0100 0.5600 0.2200</size></box></geometry><material><ambient>0.350 0.200 0.100 1</ambient><diffuse>0.350 0.200 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="dresser_handle0"><pose>-4.4800 2.2100 0.1900 0 0 0</pose><geometry><box><size>0.0200 0.1200 0.0200</size></box></geometry><material><ambient>0.800 0.800 0.800 1</ambient><diffuse>0.800 0.800 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="dresser_handle1"><pose>-4.4800 2.7900 0.1900 0 0 0</pose><geometry><box><size>0.0200 0.1200 0.0200</size></box></geometry><material><ambient>0.800 0.800 0.800 1</ambient><diffuse>0.800 0.800 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="dresser_handle2"><pose>-4.4800 2.2100 0.4300 0 0 0</pose><geometry><box><size>0.0200 0.1200 0.0200</size></box></geometry><material><ambient>0.800 0.800 0.800 1</ambient><diffuse>0.800 0.800 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="dresser_handle3"><pose>-4.4800 2.7900 0.4300 0 0 0</pose><geometry><box><size>0.0200 0.1200 0.0200</size></box></geometry><material><ambient>0.800 0.800 0.800 1</ambient><diffuse>0.800 0.800 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="dresser_handle4"><pose>-4.4800 2.2100 0.6700 0 0 0</pose><geometry><box><size>0.0200 0.1200 0.0200</size></box></geometry><material><ambient>0.800 0.800 0.800 1</ambient><diffuse>0.800 0.800 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="dresser_handle5"><pose>-4.4800 2.7900 0.6700 0 0 0</pose><geometry><box><size>0.0200 0.1200 0.0200</size></box></geometry><material><ambient>0.800 0.800 0.800 1</ambient><diffuse>0.800 0.800 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="dresser_top"><pose>-4.7450 2.5000 0.8350 0 0 0</pose><geometry><box><size>0.5100 1.2200 0.0300</size></box></geometry><material><ambient>0.350 0.200 0.100 1</ambient><diffuse>0.350 0.200 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="floor_bathroom"><pose>3.5000 2.0000 -0.0100 0 0 0</pose><geometry><box><size>3.0000 4.0000 0.0200</size></box></geometry><material><ambient>0.800 0.850 0.880 1</ambient><diffuse>0.800 0.850 0.880 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="floor_bedroom"><pose>-1.5000 2.0000 -0.0100 0 0 0</pose><geometry><box><size>7.0000 4.0000 0.0200</size></box></geometry><material><ambient>0.450 0.500 0.600 1</ambient><diffuse>0.450 0.500 0.600 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="floor_dining"><pose>2.5000 -2.0000 -0.0100 0 0 0</pose><geometry><box><size>5.0000 4.0000 0.0200</size></box></geometry><material><ambient>0.620 0.480 0.300 1</ambient><diffuse>0.620 0.480 0.300 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="floor_living"><pose>-2.5000 -2.0000 -0.0100 0 0 0</pose><geometry><box><size>5.0000 4.0000 0.0200</size></box></geometry><material><ambient>0.550 0.400 0.250 1</ambient><diffuse>0.550 0.400 0.250 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="nightstand_body"><pose>0.6250 3.8000 0.2600 0 0 0</pose><geometry><box><size>0.4500 0.4000 0.5200</size></box></geometry><material><ambient>0.300 0.180 0.100 1</ambient><diffuse>0.300 0.180 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="nightstand_drawer"><pose>0.6250 3.5975 0.3750 0 0 0</pose><geometry><box><size>0.3700 0.0050 0.1500</size></box></geometry><material><ambient>0.350 0.200 0.100 1</ambient><diffuse>0.350 0.200 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="nightstand_top"><pose>0.6250 3.7950 0.5350 0 0 0</pose><geometry><box><size>0.4700 0.4100 0.0300</size></box></geometry><material><ambient>0.350 0.200 0.100 1</ambient><diffuse>0.350 0.200 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="pillbottle"><pose>0.7000 3.8000 0.5850 0 0 0</pose><geometry><cylinder><radius>0.0200</radius><length>0.0700</length></cylinder></geometry><material><ambient>0.850 0.450 0.050 1</ambient><diffuse>0.850 0.450 0.050 1</diffuse><specular>0.1 0.1 0.1 1</specular></material><transparency>0.15</transparency></visual>
+      <visual name="pillbottle_cap"><pose>0.7000 3.8000 0.6290 0 0 0</pose><geometry><cylinder><radius>0.0220</radius><length>0.0180</length></cylinder></geometry><material><ambient>0.950 0.950 0.950 1</ambient><diffuse>0.950 0.950 0.950 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="pillbottle_label"><pose>0.7000 3.8000 0.5825 0 0 0</pose><geometry><cylinder><radius>0.0205</radius><length>0.0350</length></cylinder></geometry><material><ambient>0.980 0.980 0.920 1</ambient><diffuse>0.980 0.980 0.920 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="remote"><pose>-2.4100 -2.9100 0.6290 0 0 0</pose><geometry><box><size>0.1800 0.0500 0.0180</size></box></geometry><material><ambient>0.030 0.030 0.030 1</ambient><diffuse>0.030 0.030 0.030 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="remote_btn0a"><pose>-2.4400 -2.9200 0.6395 0 0 0</pose><geometry><box><size>0.0120 0.0100 0.0030</size></box></geometry><material><ambient>0.800 0.800 0.800 1</ambient><diffuse>0.800 0.800 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="remote_btn0b"><pose>-2.4400 -2.9000 0.6395 0 0 0</pose><geometry><box><size>0.0120 0.0100 0.0030</size></box></geometry><material><ambient>0.800 0.800 0.800 1</ambient><diffuse>0.800 0.800 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="remote_btn1a"><pose>-2.4100 -2.9200 0.6395 0 0 0</pose><geometry><box><size>0.0120 0.0100 0.0030</size></box></geometry><material><ambient>0.800 0.800 0.800 1</ambient><diffuse>0.800 0.800 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="remote_btn1b"><pose>-2.4100 -2.9000 0.6395 0 0 0</pose><geometry><box><size>0.0120 0.0100 0.0030</size></box></geometry><material><ambient>0.800 0.800 0.800 1</ambient><diffuse>0.800 0.800 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="remote_btn2a"><pose>-2.3800 -2.9200 0.6395 0 0 0</pose><geometry><box><size>0.0120 0.0100 0.0030</size></box></geometry><material><ambient>0.800 0.800 0.800 1</ambient><diffuse>0.800 0.800 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="remote_btn2b"><pose>-2.3800 -2.9000 0.6395 0 0 0</pose><geometry><box><size>0.0120 0.0100 0.0030</size></box></geometry><material><ambient>0.800 0.800 0.800 1</ambient><diffuse>0.800 0.800 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="remote_power"><pose>-2.4780 -2.9100 0.6400 0 0 0</pose><geometry><box><size>0.0140 0.0140 0.0040</size></box></geometry><material><ambient>0.800 0.800 0.800 1</ambient><diffuse>0.800 0.800 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="table_leg0"><pose>1.7800 -2.3700 0.3550 0 0 0</pose><geometry><box><size>0.0600 0.0600 0.7100</size></box></geometry><material><ambient>0.350 0.200 0.100 1</ambient><diffuse>0.350 0.200 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="table_leg1"><pose>3.2200 -2.3700 0.3550 0 0 0</pose><geometry><box><size>0.0600 0.0600 0.7100</size></box></geometry><material><ambient>0.350 0.200 0.100 1</ambient><diffuse>0.350 0.200 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="table_leg2"><pose>1.7800 -1.6300 0.3550 0 0 0</pose><geometry><box><size>0.0600 0.0600 0.7100</size></box></geometry><material><ambient>0.350 0.200 0.100 1</ambient><diffuse>0.350 0.200 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="table_leg3"><pose>3.2200 -1.6300 0.3550 0 0 0</pose><geometry><box><size>0.0600 0.0600 0.7100</size></box></geometry><material><ambient>0.350 0.200 0.100 1</ambient><diffuse>0.350 0.200 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="table_top"><pose>2.5000 -2.0000 0.7300 0 0 0</pose><geometry><box><size>1.6000 0.9000 0.0400</size></box></geometry><material><ambient>0.350 0.200 0.100 1</ambient><diffuse>0.350 0.200 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="tub_base"><pose>4.6250 3.1500 0.0500 0 0 0</pose><geometry><box><size>0.7500 1.7000 0.1000</size></box></geometry><material><ambient>0.950 0.950 0.950 1</ambient><diffuse>0.950 0.950 0.950 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="tub_wall_e"><pose>4.9700 3.1500 0.3250 0 0 0</pose><geometry><box><size>0.0600 1.7000 0.4500</size></box></geometry><material><ambient>0.950 0.950 0.950 1</ambient><diffuse>0.950 0.950 0.950 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="tub_wall_n"><pose>4.6250 3.9700 0.3250 0 0 0</pose><geometry><box><size>0.6300 0.0600 0.4500</size></box></geometry><material><ambient>0.950 0.950 0.950 1</ambient><diffuse>0.950 0.950 0.950 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="tub_wall_s"><pose>4.6250 2.3300 0.3250 0 0 0</pose><geometry><box><size>0.6300 0.0600 0.4500</size></box></geometry><material><ambient>0.950 0.950 0.950 1</ambient><diffuse>0.950 0.950 0.950 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="tub_wall_w"><pose>4.2800 3.1500 0.3250 0 0 0</pose><geometry><box><size>0.0600 1.7000 0.4500</size></box></geometry><material><ambient>0.950 0.950 0.950 1</ambient><diffuse>0.950 0.950 0.950 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="tv_foot"><pose>-4.7750 -2.0000 0.5100 0 0 0</pose><geometry><box><size>0.1500 0.3000 0.0200</size></box></geometry><material><ambient>0.030 0.030 0.030 1</ambient><diffuse>0.030 0.030 0.030 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="tv_frame"><pose>-4.7900 -2.0000 0.9600 0 0 0</pose><geometry><box><size>0.0600 1.2400 0.7200</size></box></geometry><material><ambient>0.030 0.030 0.030 1</ambient><diffuse>0.030 0.030 0.030 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="tv_neck"><pose>-4.7800 -2.0000 0.5700 0 0 0</pose><geometry><box><size>0.0400 0.0600 0.1000</size></box></geometry><material><ambient>0.030 0.030 0.030 1</ambient><diffuse>0.030 0.030 0.030 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="tv_screen"><pose>-4.7575 -2.0000 0.9600 0 0 0</pose><geometry><box><size>0.0050 1.1800 0.6600</size></box></geometry><material><ambient>0.080 0.100 0.140 1</ambient><diffuse>0.080 0.100 0.140 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="tvstand"><pose>-4.7750 -2.0000 0.2500 0 0 0</pose><geometry><box><size>0.4500 1.6000 0.5000</size></box></geometry><material><ambient>0.300 0.180 0.100 1</ambient><diffuse>0.300 0.180 0.100 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="wall_bed_bath_0"><pose>2.0000 2.0300 1.2500 0 0 0</pose><geometry><box><size>0.1200 3.9400 2.5000</size></box></geometry><material><ambient>0.850 0.840 0.800 1</ambient><diffuse>0.850 0.840 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="wall_east_0"><pose>5.0750 0.0000 1.2500 0 0 0</pose><geometry><box><size>0.1500 8.0000 2.5000</size></box></geometry><material><ambient>0.850 0.840 0.800 1</ambient><diffuse>0.850 0.840 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="wall_living_dining_0"><pose>0.0000 -3.3000 1.2500 0 0 0</pose><geometry><box><size>0.1200 1.4000 2.5000</size></box></geometry><material><ambient>0.850 0.840 0.800 1</ambient><diffuse>0.850 0.840 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="wall_living_dining_1"><pose>0.0000 -0.7300 1.2500 0 0 0</pose><geometry><box><size>0.1200 1.3400 2.5000</size></box></geometry><material><ambient>0.850 0.840 0.800 1</ambient><diffuse>0.850 0.840 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="wall_living_dining_lintel0"><pose>0.0000 -2.0000 2.3000 0 0 0</pose><geometry><box><size>0.1200 1.2000 0.4000</size></box></geometry><material><ambient>0.850 0.840 0.800 1</ambient><diffuse>0.850 0.840 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="wall_mid_0"><pose>-4.0000 0.0000 1.2500 0 0 0</pose><geometry><box><size>2.0000 0.1200 2.5000</size></box></geometry><material><ambient>0.850 0.840 0.800 1</ambient><diffuse>0.850 0.840 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="wall_mid_1"><pose>0.4500 0.0000 1.2500 0 0 0</pose><geometry><box><size>5.1000 0.1200 2.5000</size></box></geometry><material><ambient>0.850 0.840 0.800 1</ambient><diffuse>0.850 0.840 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="wall_mid_2"><pose>4.4500 0.0000 1.2500 0 0 0</pose><geometry><box><size>1.1000 0.1200 2.5000</size></box></geometry><material><ambient>0.850 0.840 0.800 1</ambient><diffuse>0.850 0.840 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="wall_mid_lintel0"><pose>-2.5500 0.0000 2.3000 0 0 0</pose><geometry><box><size>0.9000 0.1200 0.4000</size></box></geometry><material><ambient>0.850 0.840 0.800 1</ambient><diffuse>0.850 0.840 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="wall_mid_lintel1"><pose>3.4500 0.0000 2.3000 0 0 0</pose><geometry><box><size>0.9000 0.1200 0.4000</size></box></geometry><material><ambient>0.850 0.840 0.800 1</ambient><diffuse>0.850 0.840 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="wall_north_0"><pose>0.0000 4.0750 1.2500 0 0 0</pose><geometry><box><size>10.3000 0.1500 2.5000</size></box></geometry><material><ambient>0.850 0.840 0.800 1</ambient><diffuse>0.850 0.840 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="wall_south_0"><pose>0.0000 -4.0750 1.2500 0 0 0</pose><geometry><box><size>10.3000 0.1500 2.5000</size></box></geometry><material><ambient>0.850 0.840 0.800 1</ambient><diffuse>0.850 0.840 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <visual name="wall_west_0"><pose>-5.0750 0.0000 1.2500 0 0 0</pose><geometry><box><size>0.1500 8.0000 2.5000</size></box></geometry><material><ambient>0.850 0.840 0.800 1</ambient><diffuse>0.850 0.840 0.800 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <collision name="bed_collision"><pose>-0.5000 3.0000 0.2750 0 0 0</pose><geometry><box><size>1.6000 2.0000 0.5500</size></box></geometry></collision>
+      <collision name="bed_headboard_collision"><pose>-0.5000 3.9700 0.7750 0 0 0</pose><geometry><box><size>1.6000 0.0600 0.4500</size></box></geometry></collision>
+      <collision name="chair_e_back_collision"><pose>3.8000 -2.0000 0.6750 0 0 0</pose><geometry><box><size>0.0400 0.4400 0.4500</size></box></geometry></collision>
+      <collision name="chair_e_leg0_collision"><pose>3.4000 -2.2000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_e_leg1_collision"><pose>3.8000 -2.2000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_e_leg2_collision"><pose>3.4000 -1.8000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_e_leg3_collision"><pose>3.8000 -1.8000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_e_seat_collision"><pose>3.6000 -2.0000 0.4300 0 0 0</pose><geometry><box><size>0.4400 0.4400 0.0400</size></box></geometry></collision>
+      <collision name="chair_n1_back_collision"><pose>2.1000 -1.0500 0.6750 0 0 0</pose><geometry><box><size>0.4400 0.0400 0.4500</size></box></geometry></collision>
+      <collision name="chair_n1_leg0_collision"><pose>1.9000 -1.4500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_n1_leg1_collision"><pose>2.3000 -1.4500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_n1_leg2_collision"><pose>1.9000 -1.0500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_n1_leg3_collision"><pose>2.3000 -1.0500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_n1_seat_collision"><pose>2.1000 -1.2500 0.4300 0 0 0</pose><geometry><box><size>0.4400 0.4400 0.0400</size></box></geometry></collision>
+      <collision name="chair_n2_back_collision"><pose>2.9000 -1.0500 0.6750 0 0 0</pose><geometry><box><size>0.4400 0.0400 0.4500</size></box></geometry></collision>
+      <collision name="chair_n2_leg0_collision"><pose>2.7000 -1.4500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_n2_leg1_collision"><pose>3.1000 -1.4500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_n2_leg2_collision"><pose>2.7000 -1.0500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_n2_leg3_collision"><pose>3.1000 -1.0500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_n2_seat_collision"><pose>2.9000 -1.2500 0.4300 0 0 0</pose><geometry><box><size>0.4400 0.4400 0.0400</size></box></geometry></collision>
+      <collision name="chair_s1_back_collision"><pose>2.1000 -2.9500 0.6750 0 0 0</pose><geometry><box><size>0.4400 0.0400 0.4500</size></box></geometry></collision>
+      <collision name="chair_s1_leg0_collision"><pose>1.9000 -2.9500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_s1_leg1_collision"><pose>2.3000 -2.9500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_s1_leg2_collision"><pose>1.9000 -2.5500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_s1_leg3_collision"><pose>2.3000 -2.5500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_s1_seat_collision"><pose>2.1000 -2.7500 0.4300 0 0 0</pose><geometry><box><size>0.4400 0.4400 0.0400</size></box></geometry></collision>
+      <collision name="chair_s2_back_collision"><pose>2.9000 -2.9500 0.6750 0 0 0</pose><geometry><box><size>0.4400 0.0400 0.4500</size></box></geometry></collision>
+      <collision name="chair_s2_leg0_collision"><pose>2.7000 -2.9500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_s2_leg1_collision"><pose>3.1000 -2.9500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_s2_leg2_collision"><pose>2.7000 -2.5500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_s2_leg3_collision"><pose>3.1000 -2.5500 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_s2_seat_collision"><pose>2.9000 -2.7500 0.4300 0 0 0</pose><geometry><box><size>0.4400 0.4400 0.0400</size></box></geometry></collision>
+      <collision name="chair_w_back_collision"><pose>1.2000 -2.0000 0.6750 0 0 0</pose><geometry><box><size>0.0400 0.4400 0.4500</size></box></geometry></collision>
+      <collision name="chair_w_leg0_collision"><pose>1.2000 -2.2000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_w_leg1_collision"><pose>1.6000 -2.2000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_w_leg2_collision"><pose>1.2000 -1.8000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_w_leg3_collision"><pose>1.6000 -1.8000 0.2050 0 0 0</pose><geometry><box><size>0.0400 0.0400 0.4100</size></box></geometry></collision>
+      <collision name="chair_w_seat_collision"><pose>1.4000 -2.0000 0.4300 0 0 0</pose><geometry><box><size>0.4400 0.4400 0.0400</size></box></geometry></collision>
+      <collision name="couch_arm_n_collision"><pose>-2.2500 -1.0900 0.5350 0 0 0</pose><geometry><box><size>0.7000 0.1800 0.1700</size></box></geometry></collision>
+      <collision name="couch_arm_s_collision"><pose>-2.2500 -2.9100 0.5350 0 0 0</pose><geometry><box><size>0.7000 0.1800 0.1700</size></box></geometry></collision>
+      <collision name="couch_back_collision"><pose>-1.8000 -2.0000 0.6500 0 0 0</pose><geometry><box><size>0.2000 2.0000 0.4000</size></box></geometry></collision>
+      <collision name="couch_seat_collision"><pose>-2.1500 -2.0000 0.2250 0 0 0</pose><geometry><box><size>0.9000 2.0000 0.4500</size></box></geometry></collision>
+      <collision name="dresser_collision"><pose>-4.7350 2.5000 0.4250 0 0 0</pose><geometry><box><size>0.5300 1.2200 0.8500</size></box></geometry></collision>
+      <collision name="floor_collision"><pose>0.0000 0.0000 -0.0500 0 0 0</pose><geometry><box><size>10.3000 8.3000 0.1000</size></box></geometry></collision>
+      <collision name="nightstand_collision"><pose>0.6250 3.7950 0.2750 0 0 0</pose><geometry><box><size>0.4700 0.4100 0.5500</size></box></geometry></collision>
+      <collision name="table_leg0_collision"><pose>1.7800 -2.3700 0.3550 0 0 0</pose><geometry><box><size>0.0600 0.0600 0.7100</size></box></geometry></collision>
+      <collision name="table_leg1_collision"><pose>3.2200 -2.3700 0.3550 0 0 0</pose><geometry><box><size>0.0600 0.0600 0.7100</size></box></geometry></collision>
+      <collision name="table_leg2_collision"><pose>1.7800 -1.6300 0.3550 0 0 0</pose><geometry><box><size>0.0600 0.0600 0.7100</size></box></geometry></collision>
+      <collision name="table_leg3_collision"><pose>3.2200 -1.6300 0.3550 0 0 0</pose><geometry><box><size>0.0600 0.0600 0.7100</size></box></geometry></collision>
+      <collision name="table_top_collision"><pose>2.5000 -2.0000 0.7300 0 0 0</pose><geometry><box><size>1.6000 0.9000 0.0400</size></box></geometry></collision>
+      <collision name="tub_collision"><pose>4.6250 3.1500 0.2750 0 0 0</pose><geometry><box><size>0.7500 1.7000 0.5500</size></box></geometry></collision>
+      <collision name="tv_collision"><pose>-4.7750 -2.0000 0.9100 0 0 0</pose><geometry><box><size>0.1500 1.2400 0.8200</size></box></geometry></collision>
+      <collision name="tvstand_collision"><pose>-4.7750 -2.0000 0.2500 0 0 0</pose><geometry><box><size>0.4500 1.6000 0.5000</size></box></geometry></collision>
+      <collision name="wall_bed_bath_0_collision"><pose>2.0000 2.0300 1.2500 0 0 0</pose><geometry><box><size>0.1200 3.9400 2.5000</size></box></geometry></collision>
+      <collision name="wall_east_0_collision"><pose>5.0750 0.0000 1.2500 0 0 0</pose><geometry><box><size>0.1500 8.0000 2.5000</size></box></geometry></collision>
+      <collision name="wall_living_dining_0_collision"><pose>0.0000 -3.3000 1.2500 0 0 0</pose><geometry><box><size>0.1200 1.4000 2.5000</size></box></geometry></collision>
+      <collision name="wall_living_dining_1_collision"><pose>0.0000 -0.7300 1.2500 0 0 0</pose><geometry><box><size>0.1200 1.3400 2.5000</size></box></geometry></collision>
+      <collision name="wall_living_dining_lintel0_collision"><pose>0.0000 -2.0000 2.3000 0 0 0</pose><geometry><box><size>0.1200 1.2000 0.4000</size></box></geometry></collision>
+      <collision name="wall_mid_0_collision"><pose>-4.0000 0.0000 1.2500 0 0 0</pose><geometry><box><size>2.0000 0.1200 2.5000</size></box></geometry></collision>
+      <collision name="wall_mid_1_collision"><pose>0.4500 0.0000 1.2500 0 0 0</pose><geometry><box><size>5.1000 0.1200 2.5000</size></box></geometry></collision>
+      <collision name="wall_mid_2_collision"><pose>4.4500 0.0000 1.2500 0 0 0</pose><geometry><box><size>1.1000 0.1200 2.5000</size></box></geometry></collision>
+      <collision name="wall_mid_lintel0_collision"><pose>-2.5500 0.0000 2.3000 0 0 0</pose><geometry><box><size>0.9000 0.1200 0.4000</size></box></geometry></collision>
+      <collision name="wall_mid_lintel1_collision"><pose>3.4500 0.0000 2.3000 0 0 0</pose><geometry><box><size>0.9000 0.1200 0.4000</size></box></geometry></collision>
+      <collision name="wall_north_0_collision"><pose>0.0000 4.0750 1.2500 0 0 0</pose><geometry><box><size>10.3000 0.1500 2.5000</size></box></geometry></collision>
+      <collision name="wall_south_0_collision"><pose>0.0000 -4.0750 1.2500 0 0 0</pose><geometry><box><size>10.3000 0.1500 2.5000</size></box></geometry></collision>
+      <collision name="wall_west_0_collision"><pose>-5.0750 0.0000 1.2500 0 0 0</pose><geometry><box><size>0.1500 8.0000 2.5000</size></box></geometry></collision>
+      </link>
+    </model>
+    <!-- The person, wearing UWB tag 1 on their back (same model as in
+         simple_colored_warehouse.sdf). Driven by VelocityControl on /model/human/cmd_vel
+         (launch_human_waypoints.sh house, or launch_human_teleop.sh); OdometryPublisher
+         reports their true pose on /model/human/odometry. They start in the living room
+         at (0, 1), facing north with the tag towards the robot, which spawns 2.2 m behind
+         them at (0, -1.2) facing north (demo_uwb_house.sh). -->
+    <model name='human'>
+      <pose>0.0 1.0 0 0 0 1.5708</pose>
+      <!-- Named base_link so the UWB plugin treats the body as the person's own:
+           it then shadows the tag (adds loss) when it is between the tag and an anchor. -->
+      <link name='base_link'>
+        <!-- No gravity: VelocityControl only commands planar motion, so the
+             person stays upright and can't fall over when the robot bumps it -->
+        <gravity>false</gravity>
+        <inertial>
+          <pose>0.1 0 0.95 0 0 0</pose>
+          <mass>80.0</mass>
+          <inertia>
+            <ixx>24.88</ixx><ixy>0</ixy><ixz>0</ixz>
+            <iyy>25.73</iyy><iyz>0</iyz>
+            <izz>2.48</izz>
+          </inertia>
+        </inertial>
+        <!-- dartsim can't build mesh collisions, so collide as a cylinder
+             (lifted 1 cm off the floor so it slides without friction) -->
+        <collision name='body'>
+          <pose>0 0 0.91 0 0 0</pose>
+          <geometry><cylinder><radius>0.25</radius><length>1.8</length></cylinder></geometry>
+        </collision>
+        <!-- Mesh from Fuel model OpenRobotics/Standing person (cached in ~/.gz/fuel).
+             The mesh faces -y, so yaw 90 deg turns it to face the model's +x. -->
+        <visual name='visual'>
+          <pose>0 0 0.02 0.04 0 1.5708</pose>
+          <geometry>
+            <mesh>
+              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/standing person/3/files/meshes/standing.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+      </link>
+      <!-- UWB tag 1, worn on the back at waist height, so a robot following behind
+           has line of sight to it. No collision, so it doesn't change how the person
+           moves or what the LiDAR sees. -->
+      <link name='uwb_tag_1'>
+        <pose>-0.27 0 1.0 0 0 0</pose>
+        <gravity>false</gravity>
+        <inertial>
+          <mass>0.05</mass>
+          <inertia><ixx>1e-5</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1e-5</iyy><iyz>0</iyz><izz>1e-5</izz></inertia>
+        </inertial>
+        <visual name='visual'>
+          <geometry><box><size>0.03 0.06 0.09</size></box></geometry>
+          <material><ambient>0.96 0.55 0.13 1</ambient><diffuse>0.96 0.55 0.13 1</diffuse></material>
+        </visual>
+      </link>
+      <joint name='uwb_tag_1_joint' type='fixed'>
+        <parent>base_link</parent>
+        <child>uwb_tag_1</child>
+      </joint>
+      <plugin name="gz::sim::systems::VelocityControl" filename="gz-sim-velocity-control-system" />
+      <plugin name="gz::sim::systems::OdometryPublisher" filename="gz-sim-odometry-publisher-system">
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>human</robot_base_frame>
+        <odom_publish_frequency>20</odom_publish_frequency>
+      </plugin>
+    </model>
+
+  </world>
+</sdf>

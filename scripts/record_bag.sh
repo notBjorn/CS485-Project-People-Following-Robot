@@ -11,8 +11,10 @@ for arg in "$@"; do
     esac
 done
 TOPICS=(/clock /scan /odom /tf /tf_static /cmd_vel /map /amcl_pose /plan /goal_pose)
-# Camera images make bags large quickly
-[ $CAMERA = 1 ] && TOPICS+=(/oakd/rgb/preview/image_raw /oakd/rgb/preview/camera_info)
+# Camera images make bags large quickly. Both robots' camera topics are listed;
+# only the running robot's are recorded.
+[ $CAMERA = 1 ] && TOPICS+=(/oakd/rgb/preview/image_raw /oakd/rgb/preview/camera_info
+                            /head_front_camera/rgb/image_raw /head_front_camera/rgb/camera_info)
 OUT="$PROJECT_ROOT/bags/${NAME}_$(date +%Y%m%d_%H%M%S)"
 mkdir -p "$PROJECT_ROOT/bags"
 echo "Recording to $OUT - Ctrl+C to stop"

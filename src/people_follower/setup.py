@@ -13,7 +13,10 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', glob('launch/*.launch.py')),
         ('share/' + package_name + '/worlds', glob('worlds/*.sdf')),
-        ('share/' + package_name + '/config', glob('config/*')),
+        ('share/' + package_name + '/urdf', glob('urdf/*.xacro')),
+        ('share/' + package_name + '/models', glob('models/*.sdf')),
+        ('share/' + package_name + '/config', glob('config/*.yaml')),
+        ('share/' + package_name + '/config/tiago', glob('config/tiago/*.yaml')),
         ('share/' + package_name + '/maps', glob('maps/*.yaml') + glob('maps/*.pgm')),
     ],
     install_requires=['setuptools'],
@@ -27,6 +30,10 @@ setup(
         'console_scripts': [
             # 'follower = people_follower.follower:main',
             'human_waypoints = people_follower.human_waypoints:main',
+            'uwb_localizer = people_follower.uwb_localizer:main',
+            'uwb_follower = people_follower.uwb_follower:main',
+            'auto_explorer = people_follower.auto_explorer:main',
+            'tiago_base_relay = people_follower.tiago_base_relay:main',
         ],
     },
 )

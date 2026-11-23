@@ -1,7 +1,11 @@
 CS485 People-Following Robot - Run Directions
 ==============================================
-ROS 2 Jazzy + Gazebo Harmonic + RViz2, simulated TurtleBot 4.
+ROS 2 Jazzy + Gazebo Harmonic + RViz2, simulated TIAGo (default) or TurtleBot 4.
 All commands are run from the CS485-Project folder.
+
+Every launch, demo and mapping command below runs TIAGo. Add robot:=turtlebot4
+to use the TurtleBot 4 instead (auto_map.sh and make_map.sh: after the world name).
+Steps marked "TurtleBot 4 only" are about its dock; TIAGo has none.
 
 
 FIRST-TIME SETUP (once per machine)
@@ -12,59 +16,100 @@ FIRST-TIME SETUP (once per machine)
      sudo apt update
      sudo apt install -y ros-jazzy-turtlebot4-simulator ros-jazzy-turtlebot4-desktop ros-jazzy-teleop-twist-keyboard
 
-2. Build the workspace:
+2. Build the workspace. This also installs the TIAGo model, Nav2 and
+   slam_toolbox with rosdep:
 
      ./scripts/build.sh
+
+3. If build.sh ends with "WARNING: TIAGo's model ... is not installed", either
+   install it with apt:
+
+     sudo apt install -y ros-jazzy-easynav-playground-tiago-worlds
+
+   or build it from source (clones it into src/external/, not committed):
+
+     ./scripts/fetch_tiago_source.sh
 
 
 RUNNING THE SIMULATION
 ----------------------
-Terminal 1 - Gazebo + TurtleBot 4 + RViz:
+Terminal 1 - Gazebo + TIAGo + RViz:
 
-     ./scripts/launch_sim.sh
+     ./scripts/launch_sim.sh                      (TurtleBot 4: add robot:=turtlebot4)
 
    Startup takes a while. Wait until the robot appears in Gazebo and RViz
-   opens before moving on.
+   opens before moving on. If startup stalls, the script says so and relaunches
+   by itself (up to 3 tries).
 
 Terminal 2 - drive the robot with the keyboard:
 
      ./scripts/launch_teleop.sh
 
+   TurtleBot 4 only: undock first, before launch_teleop.sh:
+
+     source scripts/env.sh
+     ros2 action send_goal /undock irobot_create_msgs/action/Undock "{}"
+
+   The TurtleBot 4 starts docked and facing the dock. Driving forward without undocking
+   pushes it into the dock, and its bumper safety reflex then ignores your commands.
+   It still faces the dock after undocking, so turn around before driving forward.
+
    Keep this terminal focused while pressing keys:
      i = forward    , = backward    j / l = turn left / right
      k = stop       q / z = faster / slower
+     w / x = forward speed only     e / c = turn speed only
+   The TurtleBot 4's speed is capped at about 0.31 m/s, whatever teleop shows.
 
 
 MAPPING AND NAVIGATION
 ----------------------
 Navigation needs a saved map of the world. warehouse, maze and depot already
-have maps (installed with the TurtleBot 4 packages); box_room needs one made once.
+have maps (installed with the TurtleBot 4 packages); box_room and
+simple_colored_warehouse each need one made once.
 
 Making a map (SLAM):
   Terminal 1:   ./scripts/launch_slam.sh                (add world:=... for other worlds)
-  Terminal 2:   ./scripts/launch_teleop.sh              drive around until the map in RViz is complete
+  Terminal 2:   (TurtleBot 4: undock first, see RUNNING THE SIMULATION)
+                ./scripts/launch_teleop.sh              drive around until the map in RViz is complete
+                Press c about 10 times first to slow the turns: fast turns rotate
+                the whole map (about 7 degrees in one test).
   Terminal 3:   ./scripts/save_map.sh box_room          name it after the world
+                ("Failed to spin map subscription" is fine: it tries up to 3 times.)
   Then stop everything (Ctrl+C) and run:  ./scripts/build.sh
   The map is saved in src/people_follower/maps/ - commit it so the team has it.
 
 Navigating on the map:
   Terminal 1:   ./scripts/launch_nav.sh                 (add world:=warehouse etc.)
-  In RViz:      "2D Pose Estimate" = tell the robot where it is
-                "Nav2 Goal"        = click a spot to send the robot there
+                This also sets the robot's starting pose on the map for you, using
+                x:=, y:= and yaw:= if you pass them. Wait for "Initial pose set".
+  Terminal 2:   TurtleBot 4 only: undock (see RUNNING THE SIMULATION)
+  In RViz:      "Nav2 Goal"        = click a spot to send the robot there
+                "2D Pose Estimate" = correct the robot's position, if it's wrong
+  Or send a goal without RViz:  ./scripts/send_goal.sh -2.0 2.0
+  TurtleBot 4: Nav2 can't see the dock (it's below the lidar) and will drive into it if the dock
+  is on the way to your goal. Pick a first goal away from it. nav_automation_node
+  and nav_demo.sh go around it by themselves.
 
 Automated navigation (no clicking):
   Terminal 1:   ./scripts/launch_nav.sh
   Terminal 2:   ./scripts/launch_nav_node.sh
-                The node docks, sets its starting pose, waits for Nav2, undocks
-                and drives to the goal. Choose the goal with:
+                The node sets its starting pose, waits for Nav2 and drives to the
+                goal (the TurtleBot 4 also docks first and undocks after). It
+                detects which robot is running. Choose the goal with:
                 ./scripts/launch_nav_node.sh -p goal_x:=3.0 -p goal_y:=-2.0
-                Node parameters: initial_x, initial_y, initial_direction (degrees),
-                goal_x, goal_y, update_period (s), resend_distance (m)
+                Node parameters: robot (auto, tiago or turtlebot4), initial_x,
+                initial_y, initial_direction (degrees), goal_x, goal_y,
+                update_period (s), resend_distance (m)
 
 
 OPTIONS FOR launch_sim.sh
 -------------------------
+  robot:=tiago         PAL TIAGo (default)
+  robot:=turtlebot4    TurtleBot 4
   world:=box_room      empty 10 m x 10 m room (default)
+  world:=simple_colored_warehouse    30 m x 24 m warehouse with colored boxes
+  world:=turtlebot4_house   furnished 10 m x 8 m house, 4 rooms, one person with a UWB
+                            tag (./scripts/open_turtlebot4_house.sh; demo_uwb_house.sh)
   world:=person_world  25 m x 25 m walled square + one person. Move the person from
                        another terminal, either by keyboard:
                          ./scripts/launch_human_teleop.sh
@@ -74,7 +119,7 @@ OPTIONS FOR launch_sim.sh
   world:=warehouse     TurtleBot 4 stock worlds: warehouse, maze, depot
   rviz:=false          skip RViz
   x:=1.0 y:=-2.0 yaw:=1.57    starting pose of the robot
-  model:=lite          TurtleBot 4 Lite (no camera - not useful for following)
+  model:=lite          TurtleBot 4 Lite (no camera, no UWB anchors; TurtleBot 4 only)
   slam:=true           build a map (same as launch_slam.sh)
   localization:=true   AMCL on the saved map for the world
   nav2:=true           Nav2 path planning (use with localization:=true)
@@ -104,14 +149,74 @@ CHECKING SENSORS (in another terminal)
      source scripts/env.sh
      ros2 topic list
      ros2 topic echo --once /scan --field header
-     ros2 topic hz /oakd/rgb/preview/image_raw
+     ros2 topic hz /head_front_camera/rgb/image_raw     (TurtleBot 4: /oakd/rgb/preview/image_raw)
 
-  Key topics:
-     /scan                         LiDAR (sensor_msgs/LaserScan)
-     /oakd/rgb/preview/image_raw   camera image (sensor_msgs/Image)
-     /oakd/rgb/preview/depth       depth image (sensor_msgs/Image)
+  Key topics (both robots):
+     /scan                         2D laser (sensor_msgs/LaserScan)
      /odom                         odometry (nav_msgs/Odometry)
      /cmd_vel                      drive commands (geometry_msgs/TwistStamped)
+     /uwb_gz_simulator/distances/a<anchor>t1   UWB ranges in cm (std_msgs/Float64)
+     /uwb/person                   person position from uwb_localizer (while following)
+     /uwb/person_uncertainty       how far off that may be, m (std_msgs/Float64); over
+                                   0.4 m the follower stops trusting it
+  TIAGo:
+     /head_front_camera/rgb/image_raw                camera image (sensor_msgs/Image)
+     /head_front_camera/depth_registered/image_raw   depth image (sensor_msgs/Image)
+  TurtleBot 4:
+     /oakd/rgb/preview/image_raw   camera image (sensor_msgs/Image)
+     /oakd/rgb/preview/depth       depth image (sensor_msgs/Image)
+
+
+SERVICES AND ACTIONS (in another terminal, after source scripts/env.sh)
+------------------------------------------------------------------------
+  /uwb_localizer/calibrate   (std_srvs/Trigger)  calibrate the UWB anchors again;
+                             keep the person still for 3 s
+     ros2 service call /uwb_localizer/calibrate std_srvs/srv/Trigger
+
+  /uwb_follower/enable       (std_srvs/SetBool)  start / stop following. Stopped,
+                             the follower sends no drive commands, so teleop works
+     ros2 service call /uwb_follower/enable std_srvs/srv/SetBool "{data: false}"
+
+  /uwb_follower/clear_trail  (std_srvs/Trigger)  drop the breadcrumb trail: the robot
+                             heads straight for the person and starts a fresh trail
+                             (after bad through-wall estimates, or after moving the
+                             robot by hand); it also gets to try again if it was stuck
+     ros2 service call /uwb_follower/clear_trail std_srvs/srv/Trigger
+
+  /uwb_follower/follow_person  (people_follower_interfaces/action/FollowPerson)
+                             follow until cancelled (Ctrl+C) or a limit; the robot
+                             stops when it ends. Feedback: state, distance, speeds.
+     ./scripts/launch_follow.sh start_enabled:=false      # follower waits for this
+     ros2 action send_goal --feedback /uwb_follower/follow_person \
+         people_follower_interfaces/action/FollowPerson \
+         "{follow_distance: 1.0, max_duration_s: 60.0, lost_timeout_s: 10.0}"
+     (0 for any field: node default / no limit)
+
+  /auto_explorer/explore_map  (people_follower_interfaces/action/ExploreMap)
+                             explore with SLAM + Nav2 already running (e.g.
+                             launch_slam.sh nav2:=true); succeeds when the map is
+                             complete, aborts when it is partial. Save it with
+                             save_map.sh afterwards.
+     ros2 run people_follower auto_explorer --ros-args -p use_sim_time:=true -p auto_start:=false
+     ros2 action send_goal --feedback /auto_explorer/explore_map \
+         people_follower_interfaces/action/ExploreMap "{max_duration_s: 600.0}"
+
+  TUNING THE FOLLOWER WHILE IT RUNS
+  Every behaviour setting of uwb_follower (speeds, the 6 ft / 2 ft distances, object
+  slow/stop distances, stepping aside, getting unstuck, UWB trust) can be changed live;
+  it takes effect at the next 20 Hz cycle. Values must be decimals (1.0, not 1), within
+  each setting's range, and fit together (e.g. person_stop_m below person_slow_m);
+  otherwise the change is refused with the reason. Frames, rate_hz and start_enabled
+  are fixed at start-up.
+     ros2 param list /uwb_follower
+     ros2 param describe /uwb_follower obstacle_slow_m     # what it does, its range
+     ros2 param set /uwb_follower max_linear 0.5
+     ros2 run rqt_reconfigure rqt_reconfigure              # sliders for all of them
+     ros2 param dump /uwb_follower > my_tuning.yaml        # save what you settled on
+  To keep values, put them in uwb_follow.launch.py (or load the dumped file).
+
+  auto_map.sh still runs auto_explorer the old way (auto_start:=true: explore
+  straight away, exit 0 = complete, 2 = partial).
 
 
 TROUBLESHOOTING
@@ -122,6 +227,17 @@ TROUBLESHOOTING
     pass map:=/path/to/map.yaml.
   - The robot doesn't move in Nav2 / RViz shows no map: set "2D Pose Estimate"
     in RViz, or check the node's initial_x / initial_y match where it spawned.
+    Nav2 gives up if no pose is set within about a minute of launching; launch
+    again if so (launch_nav.sh and nav_demo.sh set the pose for you).
+  - The TurtleBot 4 won't drive forward and the log says "Ignoring velocities": it's
+    pushing into its dock. Undock first (see RUNNING THE SIMULATION).
+  - "Simulation startup stalled": the script relaunches by itself. This stops other
+    ROS nodes on the machine, including teleop, so restart those afterwards.
+  - Launches hang with "No clock received" or "Requesting list of world names", or
+    ros2 commands hang: a killed node can leave a locked file in /dev/shm that blocks
+    every later launch, and "fastdds shm clean" won't remove it.
+    The launch scripts clear these for you. If you started ros2 launch by hand, run
+    ./scripts/kill_sim.sh first.
   - No topics show up: make sure every terminal uses the scripts (or runs
     "source scripts/env.sh") so they share ROS_DOMAIN_ID=30.
   - Everything is slow / camera updates rarely: the simulation is limited
@@ -130,3 +246,11 @@ TROUBLESHOOTING
   - Warning "Desired controller update period ... faster than the gazebo
     simulation period": appears with the stock TurtleBot 4 worlds too; it can
     be ignored for now.
+  - "Package 'easynav_playground_tiago_description' not found": see step 3
+    of FIRST-TIME SETUP.
+  - TIAGo doesn't move with teleop: run ./scripts/check_sim.sh. It should show
+    tiago_base_relay running and mobile_base_controller active. The base
+    printing that it is braking once a second when idle is normal.
+  - TIAGo has no camera or laser topics: the sensors need Gazebo's Sensors
+    system, which tiago.launch.py adds to a copy of the world. The launch log
+    names that copy; check it has gz-sim-sensors-system.

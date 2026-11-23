@@ -58,3 +58,11 @@ __pycache__/
 
 # Recorded test runs (scripts/record_bag.sh)
 bags/
+
+# YOLO: Python environment and downloaded models (scripts/setup_yolo.sh, on the
+# person-recognition branch)
+/.venv-yolo/
+/models/
+
+# EasyNav TIAGo sources cloned by scripts/fetch_tiago_source.sh
+src/external/

@@ -1,0 +1,23 @@
+# Short following test in simple_colored_warehouse (scripts/test_two_people.sh): the
+# person goes round the blue box in room 1 (NE), through the north door, round the red
+# box in room 2 (NW), then through the centre gap into room 3 (SW), where the test ends.
+# Same legs as human_waypoints_warehouse_boxes.yaml up to the centre gap; at least
+# 0.9 m from every wall and box.
+#   ./scripts/launch_human_waypoints.sh two_rooms
+human_waypoints:
+  ros__parameters:
+    waypoints: [
+       3.5,  6.5,   12.0,  6.5,   # room 1 (NE): below the blue box,
+      12.0,  9.9,    3.5,  9.9,   #     round its east end and back above blocker_tr
+       2.0,  7.0,    0.0,  7.0,   # line up with the north door and go through
+      -8.0,  9.5,  -12.0,  9.5,   # room 2 (NW): above the red box,
+     -12.0,  6.5,   -3.5,  6.5,   #     round its west end and back below it
+      -3.5,  1.5,   -1.0,  1.5,   # down x = -3.5 (the second person crosses at y = 4)
+      -1.0, -1.5,   -3.5, -1.5,   # through the centre gap into room 3 (SW)
+      -3.5, -4.0,
+    ]
+    speed: 0.3
+    max_turn_rate: 1.0
+    tolerance: 0.2
+    loop: false
+    pause: 1.0

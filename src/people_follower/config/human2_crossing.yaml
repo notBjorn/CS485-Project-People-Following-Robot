@@ -1,0 +1,13 @@
+# Second person for scripts/test_two_people.sh: walks back and forth across room 2 (NW)
+# along y = 4, crossing the target person's path down x = -3.5. Spawned at (-7, 4).
+# At least 1.1 m from every wall and box.
+#   ./scripts/spawn_person.sh human2 -7 4 0
+#   ./scripts/launch_human_waypoints.sh person:=human2 params_file:=<this file>
+human2_waypoints:
+  ros__parameters:
+    waypoints: [-1.2, 4.0,  -7.0, 4.0]
+    speed: 0.3
+    max_turn_rate: 1.0
+    tolerance: 0.2
+    loop: true
+    pause: 1.0

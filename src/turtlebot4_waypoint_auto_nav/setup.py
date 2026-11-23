@@ -15,7 +15,7 @@ setup(
     zip_safe=True,
     maintainer='Madalynn Hein',
     maintainer_email='madalynnleehein@gmail.com',
-    description='Automated navigation setup for TurtleBot 4',
+    description='Automated Nav2 navigation for the TIAGo or TurtleBot 4',
     license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={

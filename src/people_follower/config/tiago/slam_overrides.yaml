@@ -1,0 +1,13 @@
+# TIAGo changes to slam_toolbox's stock parameters
+# (/opt/ros/jazzy/share/slam_toolbox/config/mapper_params_online_async.yaml).
+# tiago.launch.py merges this file on top of the stock one and sets
+# use_sim_time: true. Edit, then ./scripts/build.sh.
+
+slam_toolbox:
+  ros__parameters:
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_footprint
+    scan_topic: /scan
+    mode: mapping
+    max_laser_range: 25.0       # SICK TIM571

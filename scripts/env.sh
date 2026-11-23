@@ -7,6 +7,19 @@ if [ -f "$PROJECT_ROOT/install/setup.bash" ]; then
 else
     echo "Workspace not built yet - run scripts/build.sh first" >&2
 fi
+# Discovery uses the ROS default (subnet). Don't set ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST:
+# Nav2's nodes can't find each other's services with it in this large a launch.
+# On a shared network, give each person their own ID: export ROS_DOMAIN_ID=<0-101>
 export ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-30}
-export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 export GZ_IP=127.0.0.1
+
+# Which robot the running simulation has: prints tiago, turtlebot4, or nothing if
+# neither is up. TIAGo's base controller publishes /mobile_base_controller/odom;
+# the TurtleBot 4 publishes /dock_status.
+detect_robot() {
+    local topics
+    topics=$(ros2 topic list --no-daemon --spin-time 3 2>/dev/null)
+    if grep -qx /mobile_base_controller/odom <<<"$topics"; then echo tiago
+    elif grep -qx /dock_status <<<"$topics"; then echo turtlebot4
+    fi
+}
