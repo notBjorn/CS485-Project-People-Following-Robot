@@ -163,6 +163,38 @@ CHECKING SENSORS (in another terminal)
      /oakd/rgb/preview/depth       depth image (sensor_msgs/Image)
 
 
+SERVICES AND ACTIONS (in another terminal, after source scripts/env.sh)
+------------------------------------------------------------------------
+  /uwb_localizer/calibrate   (std_srvs/Trigger)  calibrate the UWB anchors again;
+                             keep the person still for 3 s
+     ros2 service call /uwb_localizer/calibrate std_srvs/srv/Trigger
+
+  /uwb_follower/enable       (std_srvs/SetBool)  start / stop following. Stopped,
+                             the follower sends no drive commands, so teleop works
+     ros2 service call /uwb_follower/enable std_srvs/srv/SetBool "{data: false}"
+
+  /uwb_follower/follow_person  (people_follower_interfaces/action/FollowPerson)
+                             follow until cancelled (Ctrl+C) or a limit; the robot
+                             stops when it ends. Feedback: state, distance, speeds.
+     ./scripts/launch_follow.sh start_enabled:=false      # follower waits for this
+     ros2 action send_goal --feedback /uwb_follower/follow_person \
+         people_follower_interfaces/action/FollowPerson \
+         "{follow_distance: 1.0, max_duration_s: 60.0, lost_timeout_s: 10.0}"
+     (0 for any field: node default / no limit)
+
+  /auto_explorer/explore_map  (people_follower_interfaces/action/ExploreMap)
+                             explore with SLAM + Nav2 already running (e.g.
+                             launch_slam.sh nav2:=true); succeeds when the map is
+                             complete, aborts when it is partial. Save it with
+                             save_map.sh afterwards.
+     ros2 run people_follower auto_explorer --ros-args -p use_sim_time:=true -p auto_start:=false
+     ros2 action send_goal --feedback /auto_explorer/explore_map \
+         people_follower_interfaces/action/ExploreMap "{max_duration_s: 600.0}"
+
+  auto_map.sh still runs auto_explorer the old way (auto_start:=true: explore
+  straight away, exit 0 = complete, 2 = partial).
+
+
 TROUBLESHOOTING
 ---------------
   - "Workspace not built yet": run ./scripts/build.sh.

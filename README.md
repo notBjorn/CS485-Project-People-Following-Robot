@@ -62,7 +62,8 @@ drive on `/cmd_vel` (TwistStamped), odometry on `/odom`, laser on `/scan`. On TI
 |---|---|---|
 | Camera | `/head_front_camera/rgb/image_raw` | `/oakd/rgb/preview/image_raw` |
 | UWB anchors | base, 0.30 m apart (`urdf/tiago_uwb.urdf.xacro`) | top plate, 0.17 m apart |
-| Follow distance (`launch_follow.sh`) | 0.7 m | 0.5 m |
+| Follow distance (`launch_follow.sh`) | 0.88 m centre to person: edge stops 2 ft (0.61 m) away; slows within 6 ft | 0.79 m: same 2 ft / 6 ft |
+| Top following speed (`max_linear`) | 1.0 m/s (the base's limit) | 0.3 m/s |
 | Dock | none: nothing to undock | starts docked; scripts undock it |
 | SLAM / Nav2 config | stock Jazzy + `config/tiago/*_overrides.yaml` | TurtleBot 4's own |
 

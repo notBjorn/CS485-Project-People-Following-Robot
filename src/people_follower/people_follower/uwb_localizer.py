@@ -28,6 +28,12 @@ Outputs:
     /uwb/person_truth  geometry_msgs/PointStamped, true person in base_link, solved from the
                        true ranges (simulation only, for checking accuracy)
     /uwb/person_marker visualization_msgs/Marker for RViz
+
+Service:
+    /uwb_localizer/calibrate  std_srvs/Trigger: calibrate the anchors again against ground
+                              truth (keep the person still for calibration_s). Returns
+                              straight away; the log says "Calibrated range offsets" when
+                              done, and /uwb/person pauses until then.
 """
 
 import math
@@ -38,6 +44,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.time import Time
 from std_msgs.msg import Float64
+from std_srvs.srv import Trigger
 import tf2_ros
 from visualization_msgs.msg import Marker
 
@@ -147,7 +154,8 @@ class UwbLocalizer(Node):
         self.pub_truth = self.create_publisher(PointStamped, '/uwb/person_truth', 10)
         self.pub_marker = self.create_publisher(Marker, '/uwb/person_marker', 10)
         self.create_timer(1.0 / p('rate_hz'), self.step)
-        mode = (f'calibrating against ground truth for {self.calibration_s:g} s'
+        self.create_service(Trigger, '~/calibrate', self.on_calibrate)
+        mode =(f'calibrating against ground truth for {self.calibration_s:g} s'
                 if self.calibrate else f'range offsets {self.offsets}')
         self.get_logger().info(
             f'Anchors {self.anchor_ids}, tag {tag} at {self.tag_height:g} m; {mode}')
@@ -173,6 +181,25 @@ class UwbLocalizer(Node):
             self.get_logger().info(
                 f'Anchor {anchor} at ({t.x:.3f}, {t.y:.3f}, {t.z:.3f}) in {self.base_frame}')
         return len(self.anchors) == len(self.anchor_ids)
+
+    def on_calibrate(self, request, response):
+        """Start calibrating again; step() runs it as at start-up."""
+        if not self.calibrated:
+            response.success = False
+            response.message = 'Already calibrating'
+        elif not self.truth:
+            response.success = False
+            topic = self.get_parameter('truth_topic').value
+            response.message = f"No ground-truth ranges received on {topic}; can't calibrate"
+        else:
+            self.calib_sums = {i: [0.0, 0] for i in self.anchor_ids}
+            self.calib_start = None
+            self.calibrated = False
+            response.success = True
+            response.message = (f'Calibrating for {self.calibration_s:g} s: keep the person '
+                                'still until the log says "Calibrated range offsets"')
+        self.get_logger().info(f'calibrate: {response.message}')
+        return response
 
     def run_calibration(self, now):
         """Average (true - measured) per anchor; True once done."""

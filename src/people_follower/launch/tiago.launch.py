@@ -203,17 +203,30 @@ def prepare_bridge(worlds_share, world_name, out_dir):
 
 
 def controller_names(description_share):
+    """(active, inactive, param_file): the controllers in tiago_controllers.yaml.
+
+    The file comes in two layouts. Older: every controller's type under
+    controller_manager's ros__parameters. Newer (EasyNav 0.5+): each controller in its
+    own section, '/**/<name>', with its type there; the spawners then need the file
+    (param_file), or the controller manager never learns the types.
+    """
     path = os.path.join(description_share, 'config', 'tiago_controllers.yaml')
     if not os.path.isfile(path):
-        return ACTIVE_CONTROLLERS, []
+        return ACTIVE_CONTROLLERS, [], None
     with open(path) as f:
         data = yaml.safe_load(f) or {}
-    cm = (data.get('controller_manager') or {}).get('ros__parameters') or {}
+    sections = {key.rsplit('/', 1)[-1]: (value or {}).get('ros__parameters') or {}
+                for key, value in data.items() if isinstance(value, dict)}
+    cm = sections.get('controller_manager', {})
     names = [k for k, v in cm.items() if isinstance(v, dict) and 'type' in v]
+    param_file = None
     if not names:
-        return ACTIVE_CONTROLLERS, []
+        names = [k for k, v in sections.items() if k != 'controller_manager' and 'type' in v]
+        param_file = path if names else None
+    if not names:
+        return ACTIVE_CONTROLLERS, [], None
     return ([n for n in ACTIVE_CONTROLLERS if n in names],
-            [n for n in names if n not in ACTIVE_CONTROLLERS])
+            [n for n in names if n not in ACTIVE_CONTROLLERS], param_file)
 
 
 def find_map(context, world):
@@ -316,9 +329,11 @@ def launch_setup(context):
                    '-x', arg('x'), '-y', arg('y'), '-z', arg('z'), '-Y', arg('yaw')])
 
     # Gazebo can take a while to start, so the spawners wait up to 2 minutes for it
-    active, inactive = controller_names(pkg_description)
+    active, inactive, param_file = controller_names(pkg_description)
     spawner_args = ['--controller-manager', '/controller_manager',
                     '--controller-manager-timeout', '120']
+    if param_file:
+        spawner_args += ['--param-file', param_file]
     spawners = [Node(package='controller_manager', executable='spawner', output='screen',
                      arguments=[name] + spawner_args) for name in active]
     spawners += [Node(package='controller_manager', executable='spawner', output='screen',

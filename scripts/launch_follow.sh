@@ -6,8 +6,11 @@
 #   ./scripts/launch_human_waypoints.sh warehouse      # third terminal: the person walks
 # Works with either robot: it checks which one is running.
 # Keep the person still for the first ~3 s: the localizer calibrates the anchors then.
-# Stops 0.7 m (TIAGo) or 0.5 m (TurtleBot 4) behind the person, slowing to a creep
-# over the last 0.5 m.
+# Slows down within 6 ft of the person and stops 2 ft from them (measured from the
+# robot's edge); backs away if they come within 1.5 ft. Slows within 2 ft of objects in
+# its path and stops 0.2 m from them; if blocked for 2 s it backs up 0.3 m and skips that
+# part of the trail. Top speed: 1.0 m/s on TIAGo, 0.3 m/s on the TurtleBot 4
+# (max_linear:=<m/s> to change it).
 # Extra args pass through, e.g.: ./scripts/launch_follow.sh follow_distance:=1.0
 source "$(dirname "$0")/env.sh"
 ROBOT=$(detect_robot)

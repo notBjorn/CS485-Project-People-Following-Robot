@@ -14,6 +14,17 @@ Loop:
 Finished when no frontier is left for done_after_s (exit code 0: map complete), when
 the only frontiers left are ones Nav2 couldn't reach (exit code 2: map partial), or after
 max_duration_s (also 2). auto_map.sh saves the map in both cases; Ctrl+C exits with 1.
+
+As an action server (auto_start:=false): the node waits instead of starting by itself,
+and each people_follower_interfaces/action/ExploreMap goal on
+/auto_explorer/explore_map runs one exploration as above, with feedback (frontiers
+left, visited and unreachable, the current goal). It succeeds when the map is complete,
+aborts with complete false when it is partial, and cancelling stops the robot. The node
+keeps running for the next goal; only one runs at a time.
+
+    ros2 run people_follower auto_explorer --ros-args -p use_sim_time:=true -p auto_start:=false
+    ros2 action send_goal --feedback /auto_explorer/explore_map \
+        people_follower_interfaces/action/ExploreMap "{max_duration_s: 300}"
 """
 
 import math
@@ -26,10 +37,13 @@ from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import NavigateToPose
 from nav_msgs.msg import OccupancyGrid
 import numpy as np
+from people_follower_interfaces.action import ExploreMap
 import rclpy
-from rclpy.action import ActionClient
+from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
+from rclpy.task import Future
 from rclpy.time import Time
 import tf2_ros
 
@@ -51,6 +65,9 @@ class AutoExplorer(Node):
             'done_after_s': 10.0,       # no frontiers for this long: finished
             'max_duration_s': 900.0,
             'rate_hz': 1.0,
+            # true: explore straight away and exit when done (auto_map.sh);
+            # false: wait for ExploreMap goals
+            'auto_start': True,
         }
         for name, default in params.items():
             self.declare_parameter(name, default)
@@ -62,21 +79,43 @@ class AutoExplorer(Node):
         self.map = None
         self.goal = None            # (x, y) of the current goal
         self.goal_handle = None
-        self.goal_sent = None       # wall time the goal was sent
-        self.blacklist = []
-        self.no_frontier_since = None
-        self.start = time.time()
-        self.finished = False
-        self.complete = False
-        self.goals_reached = 0
-        self.refusals = {}          # goal -> times Nav2 refused it
-        self.retry_after = 0.0      # wall time before which no new goal is sent
+        # Everything runs on one thread (rclpy's multi-threaded executor stalls timers for
+        # seconds). An ExploreMap goal is a coroutine that waits while action_tick() runs it.
+        self.active = False
+        self.explore_goal = None    # the active ExploreMap goal: handle and done future
+        self.reset(self.p['max_duration_s'])
 
         qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL,
                          reliability=ReliabilityPolicy.RELIABLE)
         self.create_subscription(OccupancyGrid, '/map', self.on_map, qos)
         self.create_timer(1.0 / self.p['rate_hz'], self.step)
-        self.get_logger().info('Exploring: waiting for the map and Nav2...')
+        if self.p['auto_start']:
+            self.active = True
+            self.get_logger().info('Exploring: waiting for the map and Nav2...')
+        else:
+            self.action_server = ActionServer(
+                self, ExploreMap, '~/explore_map', execute_callback=self.execute,
+                goal_callback=self.on_goal,
+                cancel_callback=lambda goal_handle: CancelResponse.ACCEPT)
+            self.create_timer(0.5, self.action_tick)
+            self.get_logger().info('Waiting for ExploreMap goals on ~/explore_map')
+
+    def reset(self, max_duration_s):
+        """Fresh state for one exploration."""
+        self.goal = None
+        self.goal_handle = None
+        self.goal_sent = None       # wall time the goal was sent
+        self.blacklist = []
+        self.no_frontier_since = None
+        self.start = time.time()
+        self.max_duration = max_duration_s
+        self.finished = False
+        self.complete = False
+        self.goals_reached = 0
+        self.refusals = {}          # goal -> times Nav2 refused it
+        self.retry_after = 0.0      # wall time before which no new goal is sent
+        self.frontiers_left = 0
+        self.unreachable = 0
 
     def on_map(self, msg):
         self.map = msg
@@ -119,10 +158,10 @@ class AutoExplorer(Node):
                         stats[i, cv2.CC_STAT_AREA] * res))
         return out
 
-    def pick(self, robot):
+    def pick(self, robot, frontiers):
         """Best frontier goal, and how many frontiers were skipped as unreachable."""
         best, best_cost, skipped = None, None, 0
-        for x, y, size in self.frontiers():
+        for x, y, size in frontiers:
             if any(math.dist((x, y), b) < self.p['blacklist_radius_m'] for b in self.blacklist):
                 skipped += 1
                 continue
@@ -184,9 +223,11 @@ class AutoExplorer(Node):
         self.goal = None
 
     def step(self):
-        if self.finished:
-            return
-        if time.time() - self.start > self.p['max_duration_s']:
+        if self.active and not self.finished:
+            self.explore_step()
+
+    def explore_step(self):
+        if time.time() - self.start > self.max_duration:
             self.get_logger().info('Time limit reached; stopping exploration')
             self.finish()
             return
@@ -194,9 +235,11 @@ class AutoExplorer(Node):
         if (self.map is None or robot is None or not self.nav.server_is_ready()
                 or time.time() < self.retry_after):
             return
+        frontiers = self.frontiers()
+        self.frontiers_left = len(frontiers)
         if self.goal is not None:
             # Drop the goal if it has been mapped meanwhile or is taking too long.
-            still_there = any(math.dist(self.goal, (x, y)) < 1.0 for x, y, _ in self.frontiers())
+            still_there = any(math.dist(self.goal, (x, y)) < 1.0 for x, y, _ in frontiers)
             if not still_there:
                 self.cancel()
             elif time.time() - self.goal_sent > self.p['goal_timeout_s']:
@@ -205,7 +248,9 @@ class AutoExplorer(Node):
                 self.cancel()
             else:
                 return
-        target, skipped = self.pick(robot)
+        target, skipped = self.pick(robot, frontiers)
+        self.unreachable = skipped
+        self.frontiers_left = len(frontiers) - skipped
         if target is None:
             if self.no_frontier_since is None:
                 self.no_frontier_since = time.time()
@@ -229,11 +274,86 @@ class AutoExplorer(Node):
         self.cancel()
         self.finished = True
 
+    # --- ExploreMap action (auto_start:=false) -----------------------------------------
+
+    def on_goal(self, goal_request):
+        if self.active:
+            self.get_logger().info('Refusing ExploreMap goal: already exploring')
+            return GoalResponse.REJECT
+        # Claim it here, so a second goal arriving before execute() starts is refused.
+        self.active = True
+        return GoalResponse.ACCEPT
+
+    async def execute(self, goal_handle):
+        """Explore until finished or cancelled, without blocking the executor:
+        action_tick() sends feedback and completes the goal's future at the end."""
+        limit = goal_handle.request.max_duration_s
+        self.reset(limit if limit > 0 else self.p['max_duration_s'])
+        self.explore_goal = {'handle': goal_handle, 'done': Future()}
+        self.get_logger().info(
+            f'ExploreMap: exploring for up to {self.max_duration:g} s; waiting for the map '
+            'and Nav2...')
+        status, result = await self.explore_goal['done']
+        getattr(goal_handle, status)()
+        self.get_logger().info(f'ExploreMap: {result.message}')
+        return result
+
+    def action_tick(self):
+        """Send ExploreMap feedback, or end the goal when exploration is done or cancelled."""
+        goal = self.explore_goal
+        if goal is None:
+            return
+        handle = goal['handle']
+        cancelled = handle.is_cancel_requested
+        if cancelled and not self.finished:
+            self.finish()
+        if not self.finished:
+            feedback = ExploreMap.Feedback()
+            feedback.frontiers_left = self.frontiers_left
+            feedback.frontiers_visited = self.goals_reached
+            feedback.unreachable_frontiers = self.unreachable
+            feedback.elapsed_s = float(time.time() - self.start)
+            feedback.has_goal = self.goal is not None
+            if self.goal is not None:
+                feedback.current_goal.x, feedback.current_goal.y = map(float, self.goal)
+            handle.publish_feedback(feedback)
+            return
+        result = ExploreMap.Result()
+        result.complete = self.complete
+        result.frontiers_visited = self.goals_reached
+        result.unreachable_frontiers = self.unreachable
+        result.duration_s = float(time.time() - self.start)
+        if cancelled:
+            status, result.message = 'canceled', 'Cancelled'
+        elif result.complete:
+            status, result.message = 'succeed', 'Map complete: no unexplored edges left'
+        else:
+            status = 'abort'
+            result.message = (
+                f'Map partial: {result.unreachable_frontiers} edge(s) Nav2 could not reach'
+                if result.unreachable_frontiers else 'Map partial: time limit reached')
+        self.explore_goal = None
+        self.active = False
+        goal['done'].set_result((status, result))
+
 
 def main():
-    """Exit code 0: map complete; 2: stopped with parts unexplored; 1: interrupted."""
+    """Exit code 0: map complete; 2: stopped with parts unexplored; 1: interrupted.
+
+    With auto_start:=false it serves ExploreMap goals until Ctrl+C instead.
+    """
     rclpy.init()
     node = AutoExplorer()
+    if not node.p['auto_start']:
+        try:
+            rclpy.spin(node)   # single-threaded; see the comment in __init__
+        except (KeyboardInterrupt, ExternalShutdownException):
+            pass
+        finally:
+            node.cancel()
+            node.destroy_node()
+            rclpy.try_shutdown()
+        return
     finished = False
     try:
         while rclpy.ok() and not node.finished:

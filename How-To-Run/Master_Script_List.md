@@ -44,7 +44,7 @@ Each opens Gazebo with the robot (TIAGo, or the TurtleBot 4 with `robot:=turtleb
 
 | Script | What it does |
 |---|---|
-| `launch_follow.sh` | Starts UWB following (undocking the TurtleBot 4 first): the localizer calibrates the anchors (keep the person still for a few seconds), then the robot follows the tag wearer's path, 0.7 m behind on TIAGo or 0.5 m on the TurtleBot 4. Start the warehouse with `yaw:=3.14159` first. |
+| `launch_follow.sh` | Starts UWB following (undocking the TurtleBot 4 first): the localizer calibrates the anchors (keep the person still for a few seconds), then the robot follows the tag wearer's path, slowing within 6 ft of them, stopping 2 ft away (from the robot's edge) and backing away if they come within 1.5 ft. It slows within 2 ft of objects in its path and stops 0.2 m from them, and if blocked for 2 s it backs up 0.3 m and skips that part of the trail. Top speed 1.0 m/s on TIAGo, 0.3 m/s on the TurtleBot 4 (`max_linear:=`). Start the warehouse with `yaw:=3.14159` first. |
 
 ## Demos
 
