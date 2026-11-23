@@ -108,6 +108,8 @@ OPTIONS FOR launch_sim.sh
   robot:=turtlebot4    TurtleBot 4
   world:=box_room      empty 10 m x 10 m room (default)
   world:=simple_colored_warehouse    30 m x 24 m warehouse with colored boxes
+  world:=turtlebot4_house   furnished 10 m x 8 m house, 4 rooms, one person with a UWB
+                            tag (./scripts/open_turtlebot4_house.sh; demo_uwb_house.sh)
   world:=person_world  25 m x 25 m walled square + one person. Move the person from
                        another terminal, either by keyboard:
                          ./scripts/launch_human_teleop.sh
@@ -155,6 +157,8 @@ CHECKING SENSORS (in another terminal)
      /cmd_vel                      drive commands (geometry_msgs/TwistStamped)
      /uwb_gz_simulator/distances/a<anchor>t1   UWB ranges in cm (std_msgs/Float64)
      /uwb/person                   person position from uwb_localizer (while following)
+     /uwb/person_uncertainty       how far off that may be, m (std_msgs/Float64); over
+                                   0.4 m the follower stops trusting it
   TIAGo:
      /head_front_camera/rgb/image_raw                camera image (sensor_msgs/Image)
      /head_front_camera/depth_registered/image_raw   depth image (sensor_msgs/Image)

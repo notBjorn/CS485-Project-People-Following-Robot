@@ -28,6 +28,15 @@ Outputs:
     /uwb/person_truth  geometry_msgs/PointStamped, true person in base_link, solved from the
                        true ranges (simulation only, for checking accuracy)
     /uwb/person_marker visualization_msgs/Marker for RViz
+    /uwb/person_uncertainty  std_msgs/Float64, m: how far off /uwb/person may be. The
+                       filter's own position sigma, scaled up by how inconsistent the
+                       recent ranges are (the root of their mean normalised innovation
+                       squared over quality_window_s, if over 1), and at least
+                       poor_accept_floor_m when under half the recent ranges were
+                       accepted. Ranges through walls are noisy and biased, and with the
+                       anchors this close together that throws the direction to the
+                       person far off; this catches it (the follower stops trusting the
+                       estimate above its max_uncertainty_m).
 
 Service:
     /uwb_localizer/calibrate  std_srvs/Trigger: calibrate the anchors again against ground
@@ -43,6 +52,8 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.time import Time
+from collections import deque
+
 from std_msgs.msg import Float64
 from std_srvs.srv import Trigger
 import tf2_ros
@@ -105,6 +116,8 @@ class UwbLocalizer(Node):
         self.declare_parameter('max_fix_distance', 20.0)   # m; farther fixes are rejected
         self.declare_parameter('max_fix_rms', 0.4)         # m; worse-fitting fixes are rejected
         self.declare_parameter('reset_after_s', 0.5)
+        self.declare_parameter('quality_window_s', 1.0)     # uncertainty: recent ranges
+        self.declare_parameter('poor_accept_floor_m', 1.0)  # uncertainty if most rejected
 
         p = lambda name: self.get_parameter(name).value  # noqa: E731
         self.anchor_ids = list(p('anchor_ids'))
@@ -123,6 +136,9 @@ class UwbLocalizer(Node):
         self.gate = p('gate_sigmas')
         self.max_age = p('max_range_age_s')
         self.reset_after = p('reset_after_s')
+        self.quality_window = p('quality_window_s')
+        self.poor_accept_floor = p('poor_accept_floor_m')
+        self.recent = deque()        # (time, normalised innovation squared, accepted)
 
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
@@ -153,9 +169,10 @@ class UwbLocalizer(Node):
         self.pub_velocity = self.create_publisher(Vector3Stamped, '/uwb/person_velocity', 10)
         self.pub_truth = self.create_publisher(PointStamped, '/uwb/person_truth', 10)
         self.pub_marker = self.create_publisher(Marker, '/uwb/person_marker', 10)
+        self.pub_uncertainty = self.create_publisher(Float64, '/uwb/person_uncertainty', 10)
         self.create_timer(1.0 / p('rate_hz'), self.step)
         self.create_service(Trigger, '~/calibrate', self.on_calibrate)
-        mode =(f'calibrating against ground truth for {self.calibration_s:g} s'
+        mode = (f'calibrating against ground truth for {self.calibration_s:g} s'
                 if self.calibrate else f'range offsets {self.offsets}')
         self.get_logger().info(
             f'Anchors {self.anchor_ids}, tag {tag} at {self.tag_height:g} m; {mode}')
@@ -298,7 +315,10 @@ class UwbLocalizer(Node):
         h = np.array([[dx / predicted, dy / predicted, 0.0, 0.0]])
         s = float(h @ self.P @ h.T) + self.range_var
         innovation = measured - predicted
-        if innovation * innovation > self.gate * self.gate * s:
+        nis = innovation * innovation / s
+        accepted = nis <= self.gate * self.gate
+        self.recent.append((self.last_predict, min(nis, 25.0), accepted))
+        if not accepted:
             return False
         k = (self.P @ h.T) / s
         self.x = self.x + k[:, 0] * innovation
@@ -356,6 +376,9 @@ class UwbLocalizer(Node):
                 if self.update_range(self.to_odom(pose, ax, ay), az, reading[0] + self.offsets[a]):
                     self.last_accept = now
 
+        # Uncertainty first: the follower holds each estimate until the next uncertainty
+        # arrives (one cycle later), so a bad estimate never gets through unflagged.
+        self.pub_uncertainty.publish(Float64(data=self.uncertainty(now)))
         person_base = self.to_base(pose, self.x[0], self.x[1])
         self.publish_point(self.pub_person, self.base_frame, person_base)
         self.publish_point(self.pub_person_odom, self.odom_frame, self.x[:2])
@@ -365,6 +388,20 @@ class UwbLocalizer(Node):
         velocity.vector.x, velocity.vector.y = float(self.x[2]), float(self.x[3])
         self.pub_velocity.publish(velocity)
         self.publish_marker()
+
+    def uncertainty(self, now):
+        """How far off the estimate may be, in metres (see /uwb/person_uncertainty)."""
+        while self.recent and now - self.recent[0][0] > self.quality_window:
+            self.recent.popleft()
+        sigma = math.sqrt(max(self.P[0, 0], self.P[1, 1]))
+        if not self.recent:
+            return sigma
+        mean_nis = sum(n for _, n, _ in self.recent) / len(self.recent)
+        sigma *= math.sqrt(max(1.0, mean_nis))
+        accepted = sum(1 for _, _, a in self.recent if a) / len(self.recent)
+        if accepted < 0.5:
+            sigma = max(sigma, self.poor_accept_floor)
+        return sigma
 
     def publish_point(self, publisher, frame, xy):
         msg = PointStamped()

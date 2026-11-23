@@ -58,13 +58,15 @@ demo_cleanup() {
     echo "Stopped. Logs: $LOGS"
 }
 
-# demo_start_sim: the warehouse (UWB plugin, person wearing tag 1, robot carrying
-# anchors 1-4), robot at the origin facing away from the TurtleBot 4's dock so it never
-# drives over it (TIAGo has no dock; it faces the same way so the demos match).
+# demo_start_sim [world x y yaw]: a world with the UWB plugin and a person wearing tag 1
+# (the robot carries anchors 1-4). Default: the warehouse, robot at the origin facing
+# away from the TurtleBot 4's dock so it never drives over it (TIAGo has no dock; it
+# faces the same way so the demos match).
 demo_start_sim() {
-    echo "Starting Gazebo with the warehouse and $ROBOT (log: $LOGS/sim.log)..."
-    start_sim "$LOGS/sim.log" robot:="$ROBOT" world:=simple_colored_warehouse rviz:=false \
-        yaw:=3.14159 || exit 1
+    local world=${1:-simple_colored_warehouse} x=${2:-0.0} y=${3:-0.0} yaw=${4:-3.14159}
+    echo "Starting Gazebo with $world and $ROBOT (log: $LOGS/sim.log)..."
+    start_sim "$LOGS/sim.log" robot:="$ROBOT" world:="$world" rviz:=false \
+        x:="$x" y:="$y" yaw:="$yaw" || exit 1
 }
 
 # demo_start_follower: undock (TurtleBot 4), then uwb_localizer + uwb_follower. Waits until the

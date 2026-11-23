@@ -25,6 +25,7 @@ Each opens Gazebo with the robot (TIAGo, or the TurtleBot 4 with `robot:=turtleb
 | `open_box_room.sh` | Opens `box_room`, an empty 10 m x 10 m walled room (the default world). |
 | `open_person_world.sh` | Opens `person_world`, a 25 m x 25 m walled square with one person. |
 | `open_simple_colored_warehouse.sh` | Opens `simple_colored_warehouse`, a 30 m x 24 m warehouse with four rooms and coloured boxes, and one person wearing a UWB tag. |
+| `open_turtlebot4_house.sh` | Opens `turtlebot4_house`, a furnished 10 m x 8 m house (living room, dining room, bedroom, bathroom; 0.9 m doors), with one person wearing a UWB tag in the living room and the robot 2.2 m behind them. |
 | `open_warehouse.sh` | Opens the TurtleBot 4's stock `warehouse` world. Its models download the first time. |
 | `open_maze.sh` | Opens the TurtleBot 4's stock `maze` world. |
 | `open_depot.sh` | Opens the TurtleBot 4's stock `depot` world. Its models download the first time. |
@@ -37,14 +38,14 @@ Each opens Gazebo with the robot (TIAGo, or the TurtleBot 4 with `robot:=turtleb
 |---|---|
 | `launch_teleop.sh` | Drives the robot from the keyboard. Run it in its own terminal and keep that window focused. |
 | `launch_human_teleop.sh` | Drives the person from the keyboard, with the same keys as `launch_teleop.sh`. |
-| `launch_human_waypoints.sh [route]` | Walks the person along a route: `warehouse`, `warehouse_boxes` or `two_rooms` in the warehouse, or the default square in `person_world`. `person:=<name>` walks another person. |
+| `launch_human_waypoints.sh [route]` | Walks the person along a route: `warehouse`, `warehouse_boxes` or `two_rooms` in the warehouse, `house` (through all four rooms of `turtlebot4_house`), or the default square in `person_world`. `person:=<name>` walks another person. |
 | `spawn_person.sh <name> <x> <y> [yaw]` | Adds another person (without a UWB tag) to the running simulation, e.g. `human2 -7 4 0`. |
 
 ## Following a person (UWB)
 
 | Script | What it does |
 |---|---|
-| `launch_follow.sh` | Starts UWB following (undocking the TurtleBot 4 first): the localizer calibrates the anchors (keep the person still for a few seconds), then the robot follows the tag wearer's path, slowing within 6 ft of them, stopping 2 ft away (from the robot's edge) and backing away if they come within 1.5 ft. It slows within 2 ft of objects in its path and stops 0.2 m from them, and if blocked for 2 s it backs up 0.3 m and skips that part of the trail. Top speed 1.0 m/s on TIAGo, 0.3 m/s on the TurtleBot 4 (`max_linear:=`). Start the warehouse with `yaw:=3.14159` first. |
+| `launch_follow.sh` | Starts UWB following (undocking the TurtleBot 4 first): the localizer calibrates the anchors (keep the person still for a few seconds), then the robot follows the tag wearer's path, slowing within 6 ft of them, stopping 2 ft away (from the robot's edge) and backing away if they come within 1.5 ft. It slows within 2 ft of objects in its path and stops 0.2 m from them, and if blocked for 2 s it backs up 0.3 m and skips that part of the trail. At corners and doorways it keeps to the person's path (only aiming where the LiDAR shows a clear line). If the person walks towards it, it steps out of their way. If the UWB signal is lost, or the localizer reports the estimate unreliable (`/uwb/person_uncertainty` over 0.4 m, e.g. through walls), it goes to where the person was last reliably seen and waits. Top speed 1.0 m/s on TIAGo, 0.3 m/s on the TurtleBot 4 (`max_linear:=`). Start the warehouse with `yaw:=3.14159` first. |
 
 ## Demos
 
@@ -52,6 +53,7 @@ Each opens Gazebo with the robot (TIAGo, or the TurtleBot 4 with `robot:=turtleb
 |---|---|
 | `demo_uwb_follow.sh [robot:=turtlebot4]` | Demo 1: the robot follows the person by UWB once round the coloured box in each of the warehouse's four rooms. Builds the workspace first, opens Gazebo and runs until Ctrl+C. |
 | `demo_uwb_two_people.sh [robot:=turtlebot4]` | Demo 2: the same in rooms 1 and 2, with a second person (no tag) crossing the target's path. Builds the workspace first. On Ctrl+C it prints who the robot was following. |
+| `demo_uwb_house.sh [robot:=turtlebot4]` | Demo 3: in `turtlebot4_house`, the robot follows the person by UWB through every room: through the bedroom door and round the bedroom, through the arch and round the dining table, through the bathroom door and round the bathroom, and back (44 m, about 3 minutes). No map needed. Builds the workspace first, opens Gazebo and runs until Ctrl+C. |
 
 ## Mapping
 
@@ -92,4 +94,4 @@ Each opens Gazebo with the robot (TIAGo, or the TurtleBot 4 with `robot:=turtleb
 |---|---|
 | `env.sh` | Sets up ROS 2 and the workspace for the other scripts. Run `source scripts/env.sh` to use `ros2` commands by hand. |
 | `sim_start.sh` | Starts the simulation and waits until the robot is ready; the launch scripts use it. |
-| `demo_uwb_common.sh` | Shared steps for the two UWB demo scripts, including building the workspace (from scratch if `install/` holds another branch's packages). |
+| `demo_uwb_common.sh` | Shared steps for the UWB demo scripts (`demo_start_sim [world x y yaw]` picks the world), including building the workspace (from scratch if `install/` holds another branch's packages). |

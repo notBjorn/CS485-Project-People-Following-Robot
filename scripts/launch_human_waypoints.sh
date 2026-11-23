@@ -7,6 +7,8 @@
 #                                       each coloured box: human_waypoints_warehouse_boxes.yaml
 #   ./scripts/launch_human_waypoints.sh two_rooms   simple_colored_warehouse, rooms 1-2 and
 #                                       into room 3: human_waypoints_two_rooms.yaml
+#   ./scripts/launch_human_waypoints.sh house       turtlebot4_house, through all four rooms:
+#                                       human_waypoints_house.yaml
 #   ./scripts/launch_human_waypoints.sh person:=human2 params_file:=...   another person
 #                                       (added with ./scripts/spawn_person.sh)
 # Start the matching world first (launch_sim.sh world:=...).
@@ -14,7 +16,7 @@
 # Extra args pass through, e.g.: ./scripts/launch_human_waypoints.sh params_file:=/path/to/my.yaml
 source "$(dirname "$0")/env.sh"
 case "$1" in
-    warehouse|warehouse_boxes|two_rooms)
+    warehouse|warehouse_boxes|two_rooms|house)
         route="$1"; shift
         set -- "params_file:=$(ros2 pkg prefix people_follower)/share/people_follower/config/human_waypoints_${route}.yaml" "$@" ;;
 esac

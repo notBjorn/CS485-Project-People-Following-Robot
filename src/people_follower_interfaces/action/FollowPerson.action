@@ -7,6 +7,7 @@
 float32 follow_distance   # m behind the person along their path; 0 = the node's follow_distance
 float32 max_duration_s    # succeed after this long; 0 = no limit
 float32 lost_timeout_s    # abort if the person is lost for this long; 0 = keep waiting
+                          # (while lost the robot goes to where they were last seen)
 ---
 # Result
 float32 duration_s        # how long the goal ran
@@ -15,7 +16,7 @@ string message            # why it ended
 ---
 # Feedback
 string state              # following, turning, waiting, obstacle, backing, blocked,
-                          # unsticking, stuck, lost, no_estimate
+                          # unsticking, stuck, aside, lost, no_estimate
 float32 distance_to_person  # m along the trail (NaN until the person has been seen)
 float32 person_speed      # m/s
 float32 robot_speed       # m/s, commanded
