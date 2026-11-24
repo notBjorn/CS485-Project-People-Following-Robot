@@ -27,6 +27,7 @@ setup(
         'console_scripts': [
             # 'follower = people_follower.follower:main',
             'human_waypoints = people_follower.human_waypoints:main',
+            'object_detection = people_follower.object_detection_node:main',
         ],
     },
 )

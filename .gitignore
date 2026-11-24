@@ -58,3 +58,12 @@ __pycache__/
 
 # Recorded test runs (scripts/record_bag.sh)
 bags/
+# Python environment
+.venv/
+__pycache__/
+*.pyc
+
+# YOLO models and outputs
+*.pt
+runs/
+datasets/
