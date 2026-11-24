@@ -15,6 +15,7 @@ setup(
         ('share/' + package_name + '/worlds', glob('worlds/*.sdf')),
         ('share/' + package_name + '/config', glob('config/*')),
         ('share/' + package_name + '/maps', glob('maps/*.yaml') + glob('maps/*.pgm')),
+        ('share/' + package_name + '/models', glob('models/*.pt')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
