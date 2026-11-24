@@ -105,3 +105,19 @@ scripts/                      helper scripts (see Scripts above)
 | `/odom` | nav_msgs/Odometry | |
 
 `ROS_DOMAIN_ID` defaults to 30 and discovery is localhost-only (see `scripts/env.sh`).
+
+git fetch origin
+git switch feature/yolo-object-detection
+
+
+Build the project:
+./scripts/build.sh
+
+
+Start Gazebo:
+./scripts/launch_sim.sh world:=warehouse
+
+
+Then, in another terminal:
+source scripts/env.sh
+ros2 launch people_follower object_detection.launch.py
